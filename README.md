@@ -13,7 +13,7 @@
 - **Secret Detection**: Catch hardcoded credentials before they reach your repository.
 - **Config Validation**: Native parsing and validation for JSON, YAML, ENV, TOML, and XML files.
 - **PR Metrics & Velocity Tracking**: Analyze pull request size, churn, and time span metrics.
-- **AI Reviewer**: Integrates with OpenAI to automatically find logic flaws and missing edge cases.
+- **Multi-Model AI Review**: Integrates with OpenAI, Anthropic, or Ollama to find logic flaws and missing edge cases.
 - **Localization Sync**: Finds missing translation keys by comparing localization files against a base en.json.
 - **Git Hooks Installer**: Easily install pre-commit hooks to run ciforge before committing.
 - **Auto-Generated Badges**: Generate dynamic SVG badges reflecting repository health.
@@ -21,6 +21,13 @@
 - **Contributor Welcome Module**: Automatically greet first-time contributors.
 - **Auto-Fixer (`--fix`)**: Automatically resolves low-hanging issues like debug statements and bad formatting.
 - **Custom Ignore Rules**: Whitelist files and dummy secrets via `.ciforge-ignore`.
+- **Auto-Changelog Generator**: Generate `CHANGELOG.md` from git log using conventional commits.
+- **Dead Code Detector**: Find unreferenced functions and classes.
+- **Deployment Health Check**: Verify production deployments after CI runs.
+- **Config Drift Detection**: Detect out-of-sync environment files (e.g. `.env.production` vs `.env.staging`).
+- **Architecture Diagram Generator**: Auto-generate Mermaid dependency diagrams.
+- **Auto PR Descriptions**: Generate rich markdown PR descriptions from git diffs.
+- **Mobile Config Linter**: Catch errors in `pubspec.yaml`, `build.gradle`, and `Podfile`.
 
 ## Installation
 
@@ -45,6 +52,31 @@ ciforge --repo . --format html --badge
 ciforge --repo . --fix
 ```
 
+**Generate a CHANGELOG.md:**
+```bash
+ciforge --repo . --changelog
+```
+
+**Check for config drift:**
+```bash
+ciforge --repo . --drift
+```
+
+**Run deployment health check:**
+```bash
+ciforge --repo . --deploy-check https://your-production-url.com
+```
+
+**Generate architecture diagram:**
+```bash
+ciforge --repo . --arch-diagram
+```
+
+**Auto-generate PR description:**
+```bash
+ciforge --repo . --pr-describe
+```
+
 **Install local pre-commit hook (blocks bad commits):**
 ```bash
 ciforge --install-hook
@@ -58,7 +90,7 @@ Use `ciforge` directly in your workflows to comment on PRs and enforce standards
 steps:
   - uses: actions/checkout@v4
   - name: Run CI Forge
-    uses: Tahiram32/ciforge@v1.0.0
+    uses: Tahiram32/ciforge@v2.0.0
     with:
       repo: '.'
       base-ref: 'origin/main'

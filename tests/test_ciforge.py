@@ -213,5 +213,233 @@ class TestCiforge(unittest.TestCase):
                 pass
             m_open.assert_called_with(".git/hooks/pre-commit", "w")
 
+    # ------------------------------------------------------------------
+    # New v2.0.0 tests
+    # ------------------------------------------------------------------
+
+    def test_dead_code(self):
+        """A function defined in one temp file but never referenced elsewhere
+        should be flagged as dead code."""
+        import os
+        import sys
+        import tempfile
+
+        # Create a temporary directory and work inside it
+        with tempfile.TemporaryDirectory() as tmpdir:
+            orig_cwd = os.getcwd()
+            try:
+                os.chdir(tmpdir)
+
+                # File A defines a function that is NOT referenced anywhere else
+                with open("module_a.py", "w") as f:
+                    f.write("def orphaned_func():\n    pass\n")
+
+                # File B contains no reference to orphaned_func
+                with open("module_b.py", "w") as f:
+                    f.write("x = 1\n")
+
+                from src.ciforge import dead_code  # noqa: re-import in new cwd context
+                # Reload to pick up fresh os.walk from new cwd
+                import importlib
+                importlib.reload(dead_code)
+
+                findings = dead_code.analyze()
+                messages = [f.message for f in findings]
+                self.assertTrue(
+                    any("orphaned_func" in m for m in messages),
+                    f"Expected orphaned_func to be flagged as dead code. Got: {messages}"
+                )
+                for finding in findings:
+                    if "orphaned_func" in finding.message:
+                        self.assertEqual(finding.severity, "low")
+            finally:
+                os.chdir(orig_cwd)
+
+    def test_changelog(self):
+        """Mock git log output and verify sections are correctly generated."""
+        from unittest.mock import patch, MagicMock
+        from src.ciforge import changelog
+
+        fake_log = (
+            "abc1234 feat: add login page\n"
+            "def5678 fix: handle null pointer\n"
+            "aaa0001 breaking: remove deprecated API\n"
+            "bbb0002 chore: update dependencies\n"
+            "ccc0003 docs: update README\n"
+            "ddd0004 refactor: simplify auth module\n"
+            "eee0005 random commit without prefix\n"
+        )
+
+        mock_result = MagicMock()
+        mock_result.stdout = fake_log
+        mock_result.returncode = 0
+
+        with patch("subprocess.run", return_value=mock_result):
+            output = changelog.generate()
+
+        self.assertIn("## ✨ Features", output)
+        self.assertIn("## 🐛 Bug Fixes", output)
+        self.assertIn("## 💥 Breaking Changes", output)
+        self.assertIn("## 🔧 Chores", output)
+        self.assertIn("add login page", output)
+        self.assertIn("handle null pointer", output)
+        self.assertIn("remove deprecated API", output)
+        self.assertIn("update dependencies", output)
+
+    def test_config_drift(self):
+        """Two temp env files with differing keys should produce drift findings."""
+        import os
+        import tempfile
+        from src.ciforge import config_drift
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            prod_path = os.path.join(tmpdir, ".env.production")
+            staging_path = os.path.join(tmpdir, ".env.staging")
+
+            with open(prod_path, "w") as f:
+                f.write("DATABASE_URL=postgres://prod\n")
+                f.write("SECRET_KEY=abc123\n")
+                f.write("SHARED_KEY=same\n")
+
+            with open(staging_path, "w") as f:
+                f.write("STAGING_ONLY_VAR=foo\n")
+                f.write("SHARED_KEY=same\n")
+
+            findings = config_drift.analyze(prod_path, staging_path)
+
+        messages = [f.message for f in findings]
+        severities = [f.severity for f in findings]
+
+        # DATABASE_URL and SECRET_KEY in prod but not staging
+        self.assertTrue(any("DATABASE_URL" in m for m in messages))
+        self.assertTrue(any("SECRET_KEY" in m for m in messages))
+        # STAGING_ONLY_VAR in staging but not prod
+        self.assertTrue(any("STAGING_ONLY_VAR" in m for m in messages))
+        # SHARED_KEY present in both — should NOT appear
+        self.assertFalse(any("SHARED_KEY" in m for m in messages))
+        # All findings should be medium severity
+        self.assertTrue(all(s == "medium" for s in severities))
+
+    def test_multi_ai_openai(self):
+        """multi_ai.analyze should parse JSON findings from an OpenAI-style response."""
+        import json
+        from io import BytesIO
+        from unittest.mock import patch, MagicMock
+        from src.ciforge import multi_ai
+
+        fake_issues = [
+            {"line": 5, "message": "Missing error handling", "severity": "high"},
+        ]
+        openai_response = {
+            "choices": [{"message": {"content": json.dumps(fake_issues)}}]
+        }
+
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = json.dumps(openai_response).encode("utf-8")
+        mock_resp.__enter__ = lambda s: s
+        mock_resp.__exit__ = MagicMock(return_value=False)
+
+        with patch.dict("os.environ", {"CIFORGE_AI_KEY": "test-key", "CIFORGE_AI_PROVIDER": "openai"}):
+            with patch("urllib.request.urlopen", return_value=mock_resp):
+                findings = multi_ai.analyze("+x = 1/0")
+
+        self.assertEqual(len(findings), 1)
+        self.assertIn("Missing error handling", findings[0].message)
+        self.assertEqual(findings[0].severity, "high")
+
+    def test_multi_ai_no_key_returns_empty(self):
+        """multi_ai.analyze should return [] gracefully when no API key is set."""
+        import os
+        from src.ciforge import multi_ai
+
+        env = {k: v for k, v in os.environ.items()
+               if k not in ("CIFORGE_AI_KEY", "OPENAI_API_KEY")}
+        env["CIFORGE_AI_PROVIDER"] = "openai"
+
+        from unittest.mock import patch
+        with patch.dict("os.environ", env, clear=True):
+            findings = multi_ai.analyze("+some code change")
+
+        self.assertEqual(findings, [])
+
+
+    # ------------------------------------------------------------------
+    # Infra v2.0.0 tests
+    # ------------------------------------------------------------------
+
+    def test_deploy_check_fail(self):
+        """When urlopen raises, deploy_check should return a critical finding."""
+        import urllib.error
+        from unittest.mock import patch
+        from src.ciforge import deploy_check
+
+        with patch("urllib.request.urlopen", side_effect=Exception("connection refused")):
+            findings = deploy_check.check("http://localhost:9999", retries=1, timeout=1)
+
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].severity, "critical")
+        self.assertIn("could not reach", findings[0].message)
+
+    def test_arch_diagram(self):
+        """Temp py files with cross-imports should produce correct Mermaid edges."""
+        import os
+        import tempfile
+        import importlib
+        from src.ciforge import arch_diagram
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            orig_cwd = os.getcwd()
+            try:
+                os.chdir(tmpdir)
+
+                # module_a imports module_b
+                with open("module_a.py", "w") as f:
+                    f.write("import module_b\n")
+                # module_b has no internal imports
+                with open("module_b.py", "w") as f:
+                    f.write("x = 1\n")
+
+                importlib.reload(arch_diagram)
+                diagram = arch_diagram.generate()
+
+                self.assertIn("graph TD", diagram)
+                self.assertIn("module_a --> module_b", diagram)
+            finally:
+                os.chdir(orig_cwd)
+
+    def test_mobile_lint(self):
+        """pubspec.yaml missing 'version:' should produce a high-severity finding."""
+        import os
+        import tempfile
+        import importlib
+        from src.ciforge import mobile_lint
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            orig_cwd = os.getcwd()
+            try:
+                os.chdir(tmpdir)
+
+                # Write a pubspec.yaml without the version field
+                with open("pubspec.yaml", "w") as f:
+                    f.write("name: my_app\n")
+                    f.write("environment:\n")
+                    f.write("  sdk: flutter\n")
+
+                importlib.reload(mobile_lint)
+                findings = mobile_lint.analyze()
+
+                high_findings = [f for f in findings if f.severity == "high"]
+                self.assertTrue(
+                    len(high_findings) >= 1,
+                    f"Expected at least one high finding; got: {findings}"
+                )
+                self.assertTrue(
+                    any("version" in f.message.lower() for f in high_findings),
+                    f"Expected a 'version' finding; got: {[f.message for f in high_findings]}"
+                )
+            finally:
+                os.chdir(orig_cwd)
+
+
 if __name__ == '__main__':
     unittest.main()

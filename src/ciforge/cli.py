@@ -2,7 +2,7 @@ import argparse
 import sys
 import os
 import stat
-from . import scanner, code_quality, secrets, config_validator, coverage, ai_reviewer, assets, l10n, metrics, badges, community
+from . import scanner, code_quality, secrets, config_validator, coverage, ai_reviewer, assets, l10n, metrics, badges, community, multi_ai, dead_code, changelog, config_drift, mobile_lint, deploy_check, arch_diagram, pr_describe
 
 SEVERITY_LEVELS = {'low': 0, 'medium': 1, 'high': 2, 'critical': 3}
 
@@ -30,13 +30,32 @@ def main():
     parser.add_argument('--badge', action='store_true', help='Generate badge')
     parser.add_argument('--install-hook', action='store_true', help='Install git pre-commit hook')
     parser.add_argument('--fix', action='store_true', help='Auto-fix low-hanging issues')
+    parser.add_argument('--provider', type=str, default=os.environ.get('CIFORGE_AI_PROVIDER', 'openai'), help='AI provider (openai, anthropic, ollama)')
+    parser.add_argument('--changelog', action='store_true', help='Generate CHANGELOG.md from git log')
+    parser.add_argument('--drift', action='store_true', help='Check for config drift between env files')
+    parser.add_argument('--deploy-check', type=str, default=None, metavar='URL', help='Run deployment health check against the given URL')
+    parser.add_argument('--arch-diagram', action='store_true', help='Generate Mermaid architecture diagram and write to ARCHITECTURE.md')
+    parser.add_argument('--pr-describe', action='store_true', help='Generate a GitHub PR description from the current diff')
     args = parser.parse_args()
 
     if args.install_hook:
         install_git_hook()
 
+    if args.changelog:
+        changelog.write_changelog()
+        print("Changelog generation complete.")
+        sys.exit(0)
+
+    if args.arch_diagram:
+        arch_diagram.write_diagram()
+        sys.exit(0)
+
     if args.repo != '.':
         os.chdir(args.repo)
+
+    # Propagate --provider to env so multi_ai picks it up
+    if args.provider:
+        os.environ['CIFORGE_AI_PROVIDER'] = args.provider
 
     from .ignore import rules as ignore_rules
     files = [f for f in scanner.git_changed_files() if not ignore_rules.is_ignored_file(f)]
@@ -47,12 +66,27 @@ def main():
         all_findings.extend(code_quality.analyze(f, diff_text))
         all_findings.extend(secrets.analyze(f, diff_text))
         all_findings.extend(config_validator.analyze(f, diff_text))
+        all_findings.extend(multi_ai.analyze(diff_text))
 
     all_findings.extend(coverage.analyze())
     all_findings.extend(ai_reviewer.analyze())
     all_findings.extend(assets.analyze())
     all_findings.extend(l10n.analyze())
     all_findings.extend(metrics.analyze())
+    all_findings.extend(dead_code.analyze())
+    all_findings.extend(mobile_lint.analyze())
+
+    if args.drift:
+        all_findings.extend(config_drift.analyze_auto())
+
+    if args.deploy_check:
+        all_findings.extend(deploy_check.check(args.deploy_check))
+
+    if args.pr_describe:
+        combined_diff = "\n".join(scanner.git_diff(f) for f in files)
+        description = pr_describe.generate(combined_diff)
+        print(description)
+        sys.exit(0)
 
     if args.badge:
         badges.generate_badge(all_findings)
