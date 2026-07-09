@@ -1,5 +1,8 @@
-name: 'ciforge'
+name: 'CI Forge'
 description: 'Zero-dependency CI tool for code quality, coverage, secret detection and more'
+branding:
+  icon: 'shield'
+  color: 'blue'
 inputs:
   repo:
     description: 'Path to repository'
