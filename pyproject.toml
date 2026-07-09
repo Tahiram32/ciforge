@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ciforge-cli"
-version = "1.0.1"
+version = "1.0.2"
 description = "A zero-dependency CI tool replacing multiple CI services."
 readme = "README.md"
 requires-python = ">=3.8"
@@ -27,5 +27,6 @@ ciforge = "ciforge.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/Tahiram32/ciforge"
+"Source Code" = "https://github.com/Tahiram32/ciforge"
 Repository = "https://github.com/Tahiram32/ciforge"
 "Bug Tracker" = "https://github.com/Tahiram32/ciforge/issues"
