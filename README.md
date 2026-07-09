@@ -2,7 +2,7 @@
 
 [![Sponsor](https://img.shields.io/badge/Sponsor-%E2%9D%A4-ea4aaa?logo=github-sponsors)](https://github.com/sponsors/Tahiram32)
 [![PyPI](https://img.shields.io/pypi/v/ciforge-cli)](https://pypi.org/project/ciforge-cli/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/Tahiram32/ciforge/blob/master/LICENSE)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 **ciforge** is a zero-dependency CLI and GitHub Action that replaces 20 CI services with one robust tool. Run your complete CI pipeline 100% locally or natively within your actions, faster and with zero external dependencies.
 
