@@ -19,29 +19,47 @@
 ## Installation
 
 ```bash
-pip install ciforge
+pip install ciforge-cli
 ```
 
 ## Usage
 
-Run locally:
+**Run locally and print to terminal:**
 ```bash
 ciforge --repo . --base-ref origin/main --format markdown --fail-on high
 ```
 
+**Generate a beautiful HTML dashboard:**
+```bash
+ciforge --repo . --format html --badge
+```
+
+**Install local pre-commit hook (blocks bad commits):**
+```bash
+ciforge --install-hook
+```
+
 ## GitHub Action Usage
 
-Use `ciforge` directly in your workflows:
+Use `ciforge` directly in your workflows to comment on PRs and enforce standards:
 
 ```yaml
 steps:
-  - uses: actions/checkout@v3
-  - name: Run ciforge
-    uses: your-org/ciforge@v0.1.0
+  - uses: actions/checkout@v4
+  - name: Run CI Forge
+    uses: Tahiram32/ciforge@v0.3.1
     with:
       repo: '.'
       base-ref: 'origin/main'
       format: 'markdown'
       fail-on: 'high'
       post-comment: 'true'
+      badge: 'true'
+      openai-key: ${{ secrets.OPENAI_API_KEY }} # Optional: enables AI Reviewer
 ```
+
+## Roadmap (v1.0.0)
+We are actively working towards General Availability! Check our [Milestones](https://github.com/Tahiram32/ciforge/milestones) for progress on:
+- 🧰 **Auto-Fixer (`--fix`)**: Automatically resolve low-hanging issues.
+- 🛡️ **Custom Ignore Rules**: Support for `.ciforge-ignore` whitelists.
+- ⚙️ **Expanded Validation**: Native parsing for TOML and XML files.
