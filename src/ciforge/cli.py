@@ -55,11 +55,30 @@ def _main():
     parser.add_argument('--auto-update', action='store_true', help='Automatically upgrade dependencies in package.json/requirements.txt')
     parser.add_argument('--publish-dashboard', type=str, default=os.environ.get('CIFORGE_DASHBOARD_URL', None), help='URL to publish findings to the CI Forge Cloud dashboard')
     parser.add_argument('--cost-report', action='store_true', help='Estimate monthly CI cost waste from redundant scans')
+    parser.add_argument('--chat', action='store_true', help='Launch interactive Chat with Codebase')
+    parser.add_argument('--gui', action='store_true', help='Launch Drag-and-Drop Desktop App')
+    
+    # If no arguments provided, launch Interactive Wizard
+    if len(sys.argv) == 1:
+        from . import wizard
+        wizard.run()
+        sys.exit(0)
+        
     args = parser.parse_args()
 
     if args.serve_mcp:
         from . import mcp_server
         mcp_server.serve()
+        sys.exit(0)
+        
+    if args.chat:
+        from . import chat
+        chat.chat_loop(args.repo)
+        sys.exit(0)
+        
+    if args.gui:
+        from . import gui
+        gui.launch_gui(args.repo)
         sys.exit(0)
         
     if args.auto_update:
