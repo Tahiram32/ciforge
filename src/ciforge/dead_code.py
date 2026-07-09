@@ -16,6 +16,10 @@ _SKIP_NAMES: Set[str] = {
     "main",
     "setUp",
     "tearDown",
+    "setUpClass",
+    "tearDownClass",
+    "setUpModule",
+    "tearDownModule",
 }
 
 _EXCLUDED_DIRS = {".venv", "node_modules", ".git", "__pycache__"}
@@ -80,19 +84,32 @@ def analyze() -> List[Finding]:
             # Skip reserved / always-used names and test helpers
             if name in _SKIP_NAMES:
                 continue
-            if name.startswith("test_"):
+            if name.startswith("test_") or name.startswith("Test"):
                 continue
 
-            # Check if the name appears in any other file as a word boundary reference
-            # Simple substring check is sufficient for most cases
-            if name not in combined_other:
-                findings.append(
-                    Finding(
-                        file=def_file,
-                        line=0,
-                        message=f"Dead code: '{name}' is defined but never referenced",
-                        severity="low",
-                    )
+            # Check if used in any other file
+            if name in combined_other:
+                continue
+
+            # Check if used locally in its own file (more than just the 'def' or 'class' statement)
+            import re
+            try:
+                with open(def_file, "r", encoding="utf-8", errors="ignore") as f:
+                    local_content = f.read()
+                # Find all word boundary occurrences of the name
+                occurrences = len(re.findall(r'\b' + re.escape(name) + r'\b', local_content))
+                if occurrences > 1:
+                    continue  # Used locally
+            except Exception:
+                pass
+
+            findings.append(
+                Finding(
+                    file=def_file,
+                    line=0,
+                    message=f"Dead code: '{name}' is defined but never referenced",
+                    severity="low",
                 )
+            )
 
     return findings
