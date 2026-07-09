@@ -1,0 +1,40 @@
+name: 'ciforge'
+description: 'Zero-dependency CI tool for code quality, coverage, secret detection and more'
+inputs:
+  repo:
+    description: 'Path to repository'
+    required: false
+    default: '.'
+  base-ref:
+    description: 'Base reference branch'
+    required: false
+    default: 'origin/main'
+  format:
+    description: 'Output format'
+    required: false
+    default: 'markdown'
+  fail-on:
+    description: 'Failure threshold'
+    required: false
+    default: 'high'
+  post-comment:
+    description: 'Post PR comment'
+    required: false
+    default: 'false'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+
+    - name: Install ciforge
+      run: pip install .
+      shell: bash
+      working-directory: ${{ github.action_path }}
+
+    - name: Run ciforge
+      run: ciforge --repo "${{ inputs.repo }}" --base-ref "${{ inputs.base-ref }}" --format "${{ inputs.format }}" --fail-on "${{ inputs.fail-on }}"
+      shell: bash
