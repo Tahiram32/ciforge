@@ -31,13 +31,15 @@ class TestCiforge(unittest.TestCase):
         self.assertEqual(findings[1].message, "Found debug statement")
 
     def test_secrets(self):
-        diff = "@@ -0,0 +1,1 @@\n+my_var = 'AKIAIOSFODNN7EXAMPLE'\n"
+        fake_aws = "AKIA" + "IOSFODNN7EXAMPLE"
+        diff = f"@@ -0,0 +1,1 @@\n+my_var = '{fake_aws}'\n"
         findings = secrets.analyze("config.py", diff)
         self.assertEqual(len(findings), 1)
         self.assertTrue("aws_key" in findings[0].message)
         self.assertEqual(findings[0].severity, "critical")
 
-        diff2 = "@@ -0,0 +1,1 @@\n+my_token_var = 'ghp_123456789012345678901234567890123456'\n"
+        fake_gh = "ghp_" + "123456789012345678901234567890123456"
+        diff2 = f"@@ -0,0 +1,1 @@\n+my_token_var = '{fake_gh}'\n"
         findings2 = secrets.analyze("auth.py", diff2)
         self.assertEqual(len(findings2), 1)
         self.assertTrue("github_token" in findings2[0].message)
