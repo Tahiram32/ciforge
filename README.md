@@ -2,7 +2,7 @@
 
 [![Sponsor](https://img.shields.io/badge/Sponsor-%E2%9D%A4-ea4aaa?logo=github-sponsors)](https://github.com/sponsors/Tahiram32)
 [![PyPI](https://img.shields.io/pypi/v/ciforge-cli)](https://pypi.org/project/ciforge-cli/)
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPLv3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
 **ciforge** is a zero-dependency CLI and GitHub Action that replaces 20 CI services with one robust tool. Run your complete CI pipeline 100% locally or natively within your actions, faster and with zero external dependencies.
 
@@ -101,13 +101,16 @@ steps:
       openai-key: ${{ secrets.OPENAI_API_KEY }} # Optional: enables AI Reviewer
 ```
 
-## ❤️ Sponsorship
+## ❤️ Sponsorship & Commercial Licenses
 
-ciforge is free and open source, and will always stay that way. If it saves you time or money by replacing paid CI services, consider sponsoring its continued development!
+`ciforge` is licensed under the strict **GNU AGPLv3** license. It is 100% free and open source for individual developers and open-source projects.
+
+### Commercial Dual License
+If your company wants to use `ciforge` in a proprietary or closed-source commercial product without being bound by the AGPLv3 restrictions (the "cloud loophole"), you must purchase a Commercial License by sponsoring the project.
 
 [![Sponsor ciforge](https://img.shields.io/badge/Sponsor%20ciforge-%E2%9D%A4-ea4aaa?logo=github-sponsors&style=for-the-badge)](https://github.com/sponsors/Tahiram32)
 
-Every sponsor helps fund:
+Every commercial sponsor helps fund:
 - 🚀 New features and integrations
 - 🐛 Bug fixes and maintenance
 - 📖 Documentation and examples
