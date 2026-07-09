@@ -24,6 +24,10 @@ inputs:
     description: 'Post PR comment'
     required: false
     default: 'false'
+  openai-key:
+    description: 'OpenAI API key for AI reviewer'
+    required: false
+    default: ''
 
 runs:
   using: "composite"
@@ -41,3 +45,5 @@ runs:
     - name: Run ciforge
       run: ciforge --repo "${{ inputs.repo }}" --base-ref "${{ inputs.base-ref }}" --format "${{ inputs.format }}" --fail-on "${{ inputs.fail-on }}"
       shell: bash
+      env:
+        CIFORGE_AI_KEY: ${{ inputs.openai-key }}

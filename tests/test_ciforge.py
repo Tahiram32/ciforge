@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch, mock_open
 
 from src.ciforge.scanner import Finding, _extract_diff_sections
-from src.ciforge import code_quality, secrets, config_validator, coverage
+from src.ciforge import code_quality, secrets, config_validator, coverage, ai_reviewer, assets, l10n, metrics
 
 class TestCiforge(unittest.TestCase):
 
@@ -67,6 +67,56 @@ class TestCiforge(unittest.TestCase):
             self.assertEqual(len(findings), 1)
             self.assertTrue("Code coverage too low" in findings[0].message)
             self.assertEqual(findings[0].severity, "medium")
+
+    @patch("os.environ.get", return_value="dummy_key")
+    @patch("src.ciforge.ai_reviewer.git_changed_files", return_value=["test.py"])
+    @patch("src.ciforge.ai_reviewer.git_diff", return_value="+print('test')")
+    @patch("urllib.request.urlopen")
+    def test_ai_reviewer(self, mock_urlopen, mock_git_diff, mock_git_files, mock_env):
+        from io import BytesIO
+        import json
+        mock_response = BytesIO(json.dumps({"choices": [{"message": {"content": "Looks good"}}]}).encode("utf-8"))
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+        findings = ai_reviewer.analyze()
+        self.assertEqual(len(findings), 1)
+        self.assertTrue("Looks good" in findings[0].message)
+
+    @patch("os.walk")
+    @patch("os.path.getsize", return_value=600 * 1024)
+    def test_assets(self, mock_getsize, mock_walk):
+        mock_walk.return_value = [(".", [], ["large_image.png"])]
+        findings = assets.analyze()
+        self.assertEqual(len(findings), 1)
+        self.assertTrue("Unoptimized asset" in findings[0].message)
+
+    @patch("os.walk")
+    @patch("builtins.open", new_callable=mock_open)
+    def test_l10n(self, mock_open_file, mock_walk):
+        mock_walk.return_value = [(".", [], ["en.json", "fr.json"])]
+        def side_effect(filename, *args, **kwargs):
+            if "en.json" in filename:
+                return mock_open(read_data='{"hello": "world", "test": "1"}').return_value
+            else:
+                return mock_open(read_data='{"hello": "monde"}').return_value
+        mock_open_file.side_effect = side_effect
+        findings = l10n.analyze()
+        self.assertEqual(len(findings), 1)
+        self.assertTrue("Missing translation key: 'test'" in findings[0].message)
+
+    @patch("subprocess.run")
+    def test_metrics(self, mock_run):
+        mock_run.return_value.returncode = 0
+        mock_run.return_value.stdout = "1000\n2000\n5600"
+        findings = metrics.analyze()
+        self.assertEqual(len(findings), 1)
+        self.assertTrue("Velocity Report" in findings[0].message)
+
+    @patch("os.path.exists", return_value=True)
+    def test_code_quality_ast(self, mock_exists):
+        python_code = "def complex_func():\n" + "".join([f"    if True:\n        pass\n" for _ in range(11)])
+        with patch("builtins.open", mock_open(read_data=python_code)):
+            findings = code_quality.analyze("file.py", "+def complex_func():")
+            self.assertTrue(any("High cyclomatic complexity" in f.message for f in findings))
 
 if __name__ == '__main__':
     unittest.main()

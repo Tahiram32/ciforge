@@ -1,6 +1,6 @@
 import argparse
 import sys
-from . import scanner, code_quality, secrets, config_validator, coverage
+from . import scanner, code_quality, secrets, config_validator, coverage, ai_reviewer, assets, l10n, metrics
 
 SEVERITY_LEVELS = {'low': 0, 'medium': 1, 'high': 2, 'critical': 3}
 
@@ -19,6 +19,10 @@ def main():
         all_findings.extend(config_validator.analyze(f, diff_text))
 
     all_findings.extend(coverage.analyze())
+    all_findings.extend(ai_reviewer.analyze())
+    all_findings.extend(assets.analyze())
+    all_findings.extend(l10n.analyze())
+    all_findings.extend(metrics.analyze())
 
     if not all_findings:
         print("No issues found. Great job!")
