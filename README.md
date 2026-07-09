@@ -8,7 +8,7 @@
 
 ## 🎥 See it in Action
 
-![CI Forge Demo](https://raw.githubusercontent.com/Tahiram32/ciforge/main/demo.gif)
+![CI Forge Demo](demo.gif)
 
 ## ⚡ Quickstart for Solo Developers & Hobbyists
 
