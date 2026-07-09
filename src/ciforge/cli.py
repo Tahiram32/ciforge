@@ -49,7 +49,14 @@ def main():
     parser.add_argument('--dupe-scan', action='store_true', help='Scan for structural code duplication')
     parser.add_argument('--cloud-cost', action='store_true', help='Estimate cloud cost from Terraform files')
     parser.add_argument('--load-test', type=str, default=None, metavar='URL', help='Run a load test against the given URL')
+    parser.add_argument('--serve-mcp', action='store_true', help='Run as an MCP stdio server')
+    parser.add_argument('--auto-fix-pr', action='store_true', help='Create an agentic PR for automated fixes')
     args = parser.parse_args()
+
+    if args.serve_mcp:
+        from . import mcp_server
+        mcp_server.serve()
+        sys.exit(0)
 
     explicit_scanners = [
         args.dead_code, args.vuln_scan, args.iac_scan, args.dupe_scan,
@@ -153,6 +160,11 @@ def main():
         fixed = fix_all(all_findings)
         if fixed > 0:
             print(f"Auto-fixer resolved {fixed} issue(s).")
+
+    if args.auto_fix_pr:
+        from . import auto_fixer
+        print("Running agentic PR fixes...")
+        auto_fixer.run_agentic_fixes(all_findings, args.repo)
 
     welcome_msg = community.get_welcome_message()
     max_severity_found = -1

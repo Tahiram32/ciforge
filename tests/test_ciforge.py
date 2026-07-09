@@ -663,4 +663,39 @@ if __name__ == '__main__':
         data = json.loads(request.data.decode("utf-8"))
         self.assertEqual(data["finding_message"], "Test finding")
 
+    @patch("sys.stdout")
+    def test_mcp_server_initialize(self, mock_stdout):
+        from src.ciforge import mcp_server
+        req = {"jsonrpc": "2.0", "id": 1, "method": "initialize"}
+        resp = mcp_server.handle_request(req)
+        self.assertIn("serverInfo", resp)
+        self.assertEqual(resp["serverInfo"]["name"], "ciforge")
 
+    @patch("subprocess.run")
+    @patch("src.ciforge.auto_fixer.call_llm_for_fixes")
+    def test_auto_fixer(self, mock_call_llm, mock_run):
+        from src.ciforge import auto_fixer
+        from src.ciforge.scanner import Finding
+        import os, tempfile
+        
+        mock_call_llm.return_value = [{"file": "test_auto.py", "content": "print('fixed')"}]
+        mock_run.return_value.stdout = "git@github.com:test/repo.git\n"
+        
+        with tempfile.TemporaryDirectory() as tmpdir:
+            orig_cwd = os.getcwd()
+            try:
+                os.chdir(tmpdir)
+                with open("test_auto.py", "w") as f:
+                    f.write("print('bug')")
+                    
+                finding = Finding("test_auto.py", 1, "bug", "low")
+                auto_fixer.run_agentic_fixes([finding], tmpdir)
+                
+                with open("test_auto.py", "r") as f:
+                    content = f.read()
+                self.assertEqual(content, "print('fixed')")
+            finally:
+                os.chdir(orig_cwd)
+
+if __name__ == '__main__':
+    unittest.main()

@@ -13,8 +13,13 @@ No config needed! Just run `ciforge --repo .` locally, or drop this into your Gi
 ```yaml
 steps:
   - uses: actions/checkout@v4
-  - uses: Tahiram32/ciforge@v4.1.0
+  - uses: Tahiram32/ciforge@v5.0.0
 ```
+
+## 🤖 The Model Context Protocol (MCP) Server
+`ciforge` isn't just a CLI—it is a fully compliant MCP Server! 
+You can plug `ciforge` directly into Claude Desktop, Cursor, or any AI Agent to instantly grant it the ability to execute Enterprise DevOps tasks. 
+Just configure your agent to run: `ciforge --serve-mcp`.
 
 ## Features
 
@@ -30,6 +35,7 @@ steps:
 - **HTML Reports**: Export beautiful standalone HTML reports.
 - **Contributor Welcome Module**: Automatically greet first-time contributors.
 - **Auto-Fixer (`--fix`)**: Automatically resolves low-hanging issues like debug statements and bad formatting.
+- **Autonomous Agentic PR Fixing (`--auto-fix-pr`)**: AI autonomously rewrites vulnerable or messy code and opens a pull request for you.
 - **Custom Ignore Rules**: Whitelist files and dummy secrets via `.ciforge-ignore`.
 - `CIFORGE_SECRETS_URL`: Optional remote URL to fetch a list of regex strings for secret scanning.
 - `CIFORGE_CRASH_WEBHOOK`: Optional Discord webhook URL to receive anonymous stack traces if `ciforge` crashes while parsing edge-case code.
@@ -175,7 +181,7 @@ Use `ciforge` directly in your workflows to comment on PRs and enforce standards
 steps:
   - uses: actions/checkout@v4
   - name: Run CI Forge
-    uses: Tahiram32/ciforge@v4.1.0
+    uses: Tahiram32/ciforge@v5.0.0
     with:
       repo: '.'
       base-ref: 'origin/main'
