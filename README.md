@@ -9,7 +9,6 @@
 ## 🎥 See it in Action
 
 ![CI Forge Demo](https://raw.githubusercontent.com/Tahiram32/ciforge/main/demo.gif)
-*(To record your own demo, install `asciinema` and run `asciinema rec demo.cast`, then run ciforge, then convert it to gif!)*
 
 ## ⚡ Quickstart for Solo Developers & Hobbyists
 
