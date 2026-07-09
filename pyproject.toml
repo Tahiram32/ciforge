@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "ciforge-cli"
 version = "6.1.0"
-description = "A zero-dependency CI tool replacing multiple CI services."
+description = "The zero-dependency CI tool that saves solo developers $500/month. Replaces Snyk, SonarQube, and 18 other paid services."
 readme = "README.md"
 requires-python = ">=3.8"
 keywords = ["ci", "github-actions", "code-quality", "coverage", "linting"]

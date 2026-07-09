@@ -4,7 +4,12 @@
 [![PyPI](https://img.shields.io/pypi/v/ciforge-cli)](https://pypi.org/project/ciforge-cli/)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPLv3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
-**ciforge** is a zero-dependency CLI and GitHub Action that replaces 20 CI services with one robust tool. Run your complete CI pipeline 100% locally or natively within your actions, faster and with zero external dependencies.
+**ciforge** is the zero-dependency CI tool that saves solo developers $500/month. Replaces Snyk, SonarQube, and 18 other paid services with one robust tool. Run your complete CI pipeline 100% locally or natively within your actions, faster and with zero external dependencies.
+
+## 🎥 See it in Action
+
+![CI Forge Demo](https://raw.githubusercontent.com/Tahiram32/ciforge/main/demo.gif)
+*(To record your own demo, install `asciinema` and run `asciinema rec demo.cast`, then run ciforge, then convert it to gif!)*
 
 ## ⚡ Quickstart for Solo Developers & Hobbyists
 
@@ -175,6 +180,11 @@ ciforge --repo . --dupe-scan
 **Estimate AWS/GCP Cloud Costs from Terraform:**
 ```bash
 ciforge --repo . --cloud-cost
+```
+
+**Estimate Monthly CI Actions Cost Waste (Go Viral):**
+```bash
+ciforge --repo . --cost-report
 ```
 
 **Run Automated Load Test:**

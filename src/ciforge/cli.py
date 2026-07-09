@@ -53,6 +53,8 @@ def _main():
     parser.add_argument('--auto-fix-pr', action='store_true', help='Create an agentic PR for automated fixes')
     parser.add_argument('--incremental', action='store_true', help='Only scan files changed in git')
     parser.add_argument('--auto-update', action='store_true', help='Automatically upgrade dependencies in package.json/requirements.txt')
+    parser.add_argument('--publish-dashboard', type=str, default=os.environ.get('CIFORGE_DASHBOARD_URL', None), help='URL to publish findings to the CI Forge Cloud dashboard')
+    parser.add_argument('--cost-report', action='store_true', help='Estimate monthly CI cost waste from redundant scans')
     args = parser.parse_args()
 
     if args.serve_mcp:
@@ -68,7 +70,7 @@ def _main():
         args.dead_code, args.vuln_scan, args.iac_scan, args.dupe_scan,
         args.cloud_cost, args.mcp_scan, args.schema_scan, args.prompt_scan,
         args.drift, bool(args.deploy_check), args.pr_describe, args.blast_radius,
-        bool(args.load_test), args.changelog, args.bump_version
+        bool(args.load_test), args.changelog, args.bump_version, args.cost_report
     ]
     if not any(explicit_scanners):
         args.dead_code = True
@@ -163,6 +165,11 @@ def _main():
         all_findings.extend(_run_scan("cloud_cost", cloud_cost.analyze))
     if getattr(args, 'load_test', False):
         all_findings.extend(_run_scan("load_test", load_test.analyze, args.load_test))
+
+    if getattr(args, 'cost_report', False):
+        from . import ci_cost
+        ci_cost.report_cost(args.repo, len(files))
+        sys.exit(0)
 
     if args.badge:
         badges.generate_badge(all_findings)
@@ -400,6 +407,21 @@ def _main():
             print(f"- **[{finding.severity.upper()}]** `{finding.file}{line_info}`: {finding.message}")
             
         print("\\n\\n🔍 **Found a False Positive?** [Report it here to improve ciforge!](https://github.com/Tahiram32/ciforge/issues/new?title=False+Positive+Report&labels=false-positive)")
+
+    if args.publish_dashboard:
+        try:
+            import json, urllib.request, datetime
+            payload = {
+                "repo_name": os.path.basename(os.path.abspath(args.repo)),
+                "findings": [{"file": f.file, "line": f.line, "description": f.message, "severity": f.severity} for f in all_findings],
+                "total": len(all_findings),
+                "timestamp": datetime.datetime.now().isoformat()
+            }
+            req = urllib.request.Request(args.publish_dashboard, data=json.dumps(payload).encode('utf-8'), headers={'Content-Type': 'application/json'})
+            urllib.request.urlopen(req, timeout=5)
+            print(f"Successfully published {len(all_findings)} findings to Dashboard.")
+        except Exception as e:
+            print(f"Warning: Failed to publish to dashboard: {e}")
 
     if args.fail_on != 'none':
         fail_threshold = SEVERITY_LEVELS.get(args.fail_on, 3)
