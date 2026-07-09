@@ -107,7 +107,7 @@ def analyze() -> List[Finding]:
                 Finding(
                     file=def_file,
                     line=0,
-                    message=f"Dead code: '{name}' is defined but never referenced",
+                    message=f"💡 Tip: '{name}' isn't being used anywhere. You can safely delete it to keep your code clean!",
                     severity="low",
                 )
             )

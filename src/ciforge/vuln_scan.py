@@ -28,7 +28,7 @@ def analyze() -> list[Finding]:
                         findings.append(Finding(
                             file='requirements.txt',
                             line=i,
-                            message=f"Vulnerability detected: {pkg} {ver} is known to be vulnerable.",
+                            message=f"🚨 Security Risk: '{pkg}' has a known vulnerability. Tip: Update this package in requirements.txt to keep your users safe!",
                             severity='high'
                         ))
 
@@ -43,7 +43,7 @@ def analyze() -> list[Finding]:
                     findings.append(Finding(
                         file='package.json',
                         line=1,
-                        message=f"Vulnerability detected: {pkg} {ver} is known to be vulnerable.",
+                        message=f"🚨 Security Risk: '{pkg}' has a known vulnerability. Tip: Update this package in package.json to keep your users safe!",
                         severity='high'
                     ))
         except Exception:

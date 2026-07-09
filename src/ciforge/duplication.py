@@ -53,7 +53,7 @@ def analyze() -> list[Finding]:
                     findings.append(Finding(
                         file=f1,
                         line=line1,
-                        message=f"Code Duplication: {name1} in {f1} is identical to {name2} in {f2}",
+                        message=f"💡 Tip: '{name1}' in {f1} is identical to '{name2}' in {f2}. Consider merging them into a single shared helper!",
                         severity="medium"
                     ))
                     

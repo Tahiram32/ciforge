@@ -6,6 +6,16 @@
 
 **ciforge** is a zero-dependency CLI and GitHub Action that replaces 20 CI services with one robust tool. Run your complete CI pipeline 100% locally or natively within your actions, faster and with zero external dependencies.
 
+## ⚡ Quickstart for Solo Developers & Hobbyists
+
+No config needed! Just run `ciforge --repo .` locally, or drop this into your GitHub Actions to automatically run AI code reviews, vulnerability checks, and linting with sensible defaults:
+
+```yaml
+steps:
+  - uses: actions/checkout@v4
+  - uses: Tahiram32/ciforge@v4.1.0
+```
+
 ## Features
 
 - **Code Quality**: Intelligent linting and AST-based complexity analysis (cyclomatic complexity, long functions).

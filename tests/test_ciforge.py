@@ -601,7 +601,7 @@ if __name__ == '__main__':
         mock_file.side_effect = mock_read
         findings = duplication.analyze()
         self.assertEqual(len(findings), 1)
-        self.assertIn("Code Duplication", findings[0].message)
+        self.assertIn("Consider merging", findings[0].message)
 
     @patch("glob.glob")
     @patch("builtins.open", new_callable=mock_open)

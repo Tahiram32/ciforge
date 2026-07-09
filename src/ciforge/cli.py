@@ -43,12 +43,24 @@ def main():
     parser.add_argument('--prompt-scan', action='store_true', help='Scan .py files for LLM prompt injections')
     parser.add_argument('--discord-webhook', type=str, default=None, metavar='URL', help='Discord webhook URL for notifications')
     parser.add_argument('--bump-version', action='store_true', help='Semantic version bump based on git log')
+    parser.add_argument('--dead-code', action='store_true', help='Scan for dead code')
     parser.add_argument('--vuln-scan', action='store_true', help='Scan for known vulnerabilities in requirements.txt and package.json')
     parser.add_argument('--iac-scan', action='store_true', help='Scan Infrastructure as Code files for anti-patterns')
     parser.add_argument('--dupe-scan', action='store_true', help='Scan for structural code duplication')
     parser.add_argument('--cloud-cost', action='store_true', help='Estimate cloud cost from Terraform files')
     parser.add_argument('--load-test', type=str, default=None, metavar='URL', help='Run a load test against the given URL')
     args = parser.parse_args()
+
+    explicit_scanners = [
+        args.dead_code, args.vuln_scan, args.iac_scan, args.dupe_scan,
+        args.cloud_cost, args.mcp_scan, args.schema_scan, args.prompt_scan,
+        args.drift, bool(args.deploy_check), args.pr_describe, args.blast_radius,
+        bool(args.load_test), args.changelog, args.bump_version
+    ]
+    if not any(explicit_scanners):
+        args.dead_code = True
+        args.vuln_scan = True
+        args.dupe_scan = True
 
     if args.install_hook:
         install_git_hook()
@@ -93,7 +105,8 @@ def main():
     all_findings.extend(_run_scan("assets", assets.analyze))
     all_findings.extend(_run_scan("l10n", l10n.analyze))
     all_findings.extend(_run_scan("metrics", metrics.analyze))
-    all_findings.extend(_run_scan("dead_code", dead_code.analyze))
+    if getattr(args, 'dead_code', False):
+        all_findings.extend(_run_scan("dead_code", dead_code.analyze))
     all_findings.extend(_run_scan("mobile_lint", mobile_lint.analyze))
 
     if args.blast_radius:
@@ -121,15 +134,15 @@ def main():
             print("Warning: scanner pr_describe failed.")
         sys.exit(0)
 
-    if args.vuln_scan:
+    if getattr(args, 'vuln_scan', False):
         all_findings.extend(_run_scan("vuln_scan", vuln_scan.analyze))
-    if args.iac_scan:
+    if getattr(args, 'iac_scan', False):
         all_findings.extend(_run_scan("iac_scan", iac_scan.analyze))
-    if args.dupe_scan:
+    if getattr(args, 'dupe_scan', False):
         all_findings.extend(_run_scan("duplication", duplication.analyze))
-    if args.cloud_cost:
+    if getattr(args, 'cloud_cost', False):
         all_findings.extend(_run_scan("cloud_cost", cloud_cost.analyze))
-    if args.load_test:
+    if getattr(args, 'load_test', False):
         all_findings.extend(_run_scan("load_test", load_test.analyze, args.load_test))
 
     if args.badge:
