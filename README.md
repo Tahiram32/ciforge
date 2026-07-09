@@ -26,6 +26,14 @@ steps:
 You can plug `ciforge` directly into Claude Desktop, Cursor, or any AI Agent to instantly grant it the ability to execute Enterprise DevOps tasks. 
 Just configure your agent to run: `ciforge --serve-mcp`.
 
+## ✨ The "No-Code" Experience for Everyone
+You don't need to be a DevOps engineer to use CI Forge. We've built 4 incredible features to make it accessible to everyone:
+
+1. **The Interactive Wizard:** Just run `ciforge` (with no arguments) to launch a beautiful, arrow-key driven menu. No need to memorize flags.
+2. **Drag-and-Drop Desktop GUI:** Run `ciforge --gui` to launch a native desktop window. Select your folder, hit "Scan", and get your HTML report instantly.
+3. **Chat with your Codebase:** Run `ciforge --chat` to talk to your codebase in plain English. Ask it about vulnerabilities or CI cost waste!
+4. **The 1-Click GitHub App:** You can deploy CI Forge as a native GitHub App (using the built-in webhook server) so your team can install it with one click without ever touching a YAML file.
+
 ## 💰 Save Time & Money with v5.1.0
 
 1. **Incremental Scanning (`--incremental`)**:
@@ -190,6 +198,21 @@ ciforge --repo . --cost-report
 **Run Automated Load Test:**
 ```bash
 ciforge --repo . --load-test https://your-staging-url.com
+```
+
+**Launch the Interactive Wizard (No-Code Menu):**
+```bash
+ciforge
+```
+
+**Launch the Drag-and-Drop Desktop GUI:**
+```bash
+ciforge --gui
+```
+
+**Chat with your codebase in plain English:**
+```bash
+ciforge --chat
 ```
 
 **Install local pre-commit hook (blocks bad commits):**
