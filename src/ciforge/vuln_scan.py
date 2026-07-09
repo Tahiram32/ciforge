@@ -1,19 +1,27 @@
 import os
 import re
 import json
+import urllib.request
 from .scanner import Finding
 
-KNOWN_VULNS = {
-    'requests': (2, 31, 0),
-    'django': (4, 2, 0),
-    'lodash': (4, 17, 21),
-}
+def check_osv(pkg: str, ver: str, ecosystem: str) -> bool:
+    url = "https://api.osv.dev/v1/query"
+    data = json.dumps({"version": ver, "package": {"name": pkg, "ecosystem": ecosystem}}).encode('utf-8')
+    req = urllib.request.Request(url, data=data, headers={'Content-Type': 'application/json'})
+    try:
+        with urllib.request.urlopen(req, timeout=10) as response:
+            result = json.loads(response.read().decode('utf-8'))
+            if 'vulns' in result and result['vulns']:
+                return True
+    except Exception:
+        pass
+    return False
 
-def parse_version(v_str):
-    m = re.search(r'(\d+)\.(\d+)(?:\.(\d+))?', v_str)
+def clean_version(v_str: str) -> str:
+    m = re.search(r'(\d+\.\d+(?:\.\d+)?)', v_str)
     if m:
-        return tuple(int(x) if x else 0 for x in m.groups())
-    return (999, 999, 999)
+        return m.group(1)
+    return v_str.replace('^', '').replace('~', '').replace('=', '').replace('>', '').replace('<', '').strip()
 
 def analyze() -> list[Finding]:
     findings = []
@@ -22,9 +30,9 @@ def analyze() -> list[Finding]:
             for i, line in enumerate(f, 1):
                 m = re.match(r'^([a-zA-Z0-9_\-]+)[=!<>~]+(.*)$', line.strip())
                 if m:
-                    pkg = m.group(1).lower()
-                    ver = m.group(2)
-                    if pkg in KNOWN_VULNS and parse_version(ver) < KNOWN_VULNS[pkg]:
+                    pkg = m.group(1)
+                    ver = clean_version(m.group(2))
+                    if check_osv(pkg, ver, "PyPI"):
                         findings.append(Finding(
                             file='requirements.txt',
                             line=i,
@@ -38,8 +46,8 @@ def analyze() -> list[Finding]:
                 data = json.load(f)
             deps = {**data.get('dependencies', {}), **data.get('devDependencies', {})}
             for pkg, ver in deps.items():
-                p = pkg.lower()
-                if p in KNOWN_VULNS and parse_version(ver) < KNOWN_VULNS[p]:
+                clean_ver = clean_version(ver)
+                if check_osv(pkg, clean_ver, "npm"):
                     findings.append(Finding(
                         file='package.json',
                         line=1,

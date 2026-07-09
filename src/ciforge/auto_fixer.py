@@ -103,8 +103,22 @@ def run_agentic_fixes(findings: List[Finding], repo_path: str):
             file_path = fix.get("file")
             content = fix.get("content")
             if file_path and content and os.path.exists(file_path):
+                with open(file_path, "r", encoding="utf-8") as f:
+                    orig_content = f.read()
+                    
                 with open(file_path, "w", encoding="utf-8") as f:
                     f.write(content)
+                    
+                if file_path.endswith('.py'):
+                    import ast
+                    try:
+                        ast.parse(content)
+                    except SyntaxError:
+                        print("AI hallucination detected. Reverting fix.")
+                        with open(file_path, "w", encoding="utf-8") as f:
+                            f.write(orig_content)
+                        return
+                        
                 subprocess.run(["git", "add", file_path], check=True, capture_output=True)
                 
         status = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True)

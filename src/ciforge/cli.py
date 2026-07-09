@@ -2,7 +2,7 @@ import argparse
 import sys
 import os
 import stat
-from . import scanner, code_quality, secrets, config_validator, coverage, ai_reviewer, assets, l10n, metrics, badges, community, multi_ai, dead_code, changelog, config_drift, mobile_lint, deploy_check, arch_diagram, pr_describe
+from . import scanner, code_quality, secrets, config_validator, coverage, ai_reviewer, assets, l10n, metrics, badges, community, multi_ai, dead_code, changelog, config_drift, mobile_lint, deploy_check, arch_diagram, pr_describe, universal_scanner
 from . import blast_radius, mcp_scan, schema_guardian, prompt_scan, discord_notify, semantic_bump
 from . import vuln_scan, iac_scan, duplication, cloud_cost, load_test, telemetry
 SEVERITY_LEVELS = {'low': 0, 'medium': 1, 'high': 2, 'critical': 3}
@@ -22,7 +22,7 @@ def install_git_hook():
     print("Git pre-commit hook installed successfully.")
     sys.exit(0)
 
-def main():
+def _main():
     parser = argparse.ArgumentParser(description="ciforge CLI")
     parser.add_argument('--fail-on', type=str, default='high', choices=['low', 'medium', 'high', 'critical', 'none'], help='Exit non-zero if findings of this severity or higher are found')
     parser.add_argument('--repo', type=str, default='.', help='Path to repository')
@@ -116,6 +116,8 @@ def main():
         all_findings.extend(_run_scan("secrets", secrets.analyze, f, diff_text))
         all_findings.extend(_run_scan("config_validator", config_validator.analyze, f, diff_text))
         all_findings.extend(_run_scan("multi_ai", multi_ai.analyze, diff_text))
+        if f.endswith(('.c', '.cpp', '.java', '.go', '.rs')):
+            all_findings.extend(_run_scan("universal_scanner", universal_scanner.analyze, f, diff_text))
 
     all_findings.extend(_run_scan("coverage", coverage.analyze))
     all_findings.extend(_run_scan("ai_reviewer", ai_reviewer.analyze))
@@ -419,3 +421,12 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+def main():
+    try:
+        _main()
+    except Exception as e:
+        from . import telemetry
+        telemetry.report_crash(e, "FATAL_CORE")
+        print("\n[ciforge] FATAL WARNING: ciforge encountered a catastrophic error but degraded gracefully so as not to block your CI.")
+        sys.exit(0)

@@ -543,9 +543,13 @@ class TestCiforge(unittest.TestCase):
             self.assertEqual(new_v, "1.3.0")
 
     @patch("os.path.exists")
+    @patch("urllib.request.urlopen")
     @patch("builtins.open", new_callable=mock_open)
-    def test_vuln_scan(self, mock_file, mock_exists):
+    def test_vuln_scan(self, mock_file, mock_urlopen, mock_exists):
         from src.ciforge import vuln_scan
+        import json
+        from io import BytesIO
+        from unittest.mock import MagicMock
         mock_exists.side_effect = lambda x: x in ['requirements.txt', 'package.json']
         
         def mock_read(filename, *args, **kwargs):
@@ -557,8 +561,18 @@ class TestCiforge(unittest.TestCase):
         
         mock_file.side_effect = mock_read
         
+        # Mock OSV API response
+        def mock_urlopen_call(*args, **kwargs):
+            mock_resp = MagicMock()
+            mock_resp.read.return_value = json.dumps({"vulns": [{"id": "OSV-1"}]}).encode("utf-8")
+            mock_resp.__enter__.return_value = mock_resp
+            mock_resp.__exit__.return_value = False
+            return mock_resp
+            
+        mock_urlopen.side_effect = mock_urlopen_call
+        
         findings = vuln_scan.analyze()
-        self.assertEqual(len(findings), 2)
+        self.assertEqual(len(findings), 3) # requests, django, lodash
         self.assertTrue(any("requests" in f.message for f in findings))
         self.assertTrue(any("lodash" in f.message for f in findings))
 
