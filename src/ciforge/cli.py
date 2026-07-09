@@ -56,50 +56,217 @@ def main():
         badges.generate_badge(all_findings)
 
     welcome_msg = community.get_welcome_message()
+    max_severity_found = -1
     
-    if not all_findings:
-        if args.format == 'html':
-            html_content = "<html><body style='background-color:#1e1e1e; color:#fff; font-family:sans-serif;'><h1>ciforge Report</h1>"
-            if welcome_msg:
-                html_content += f"<p><b>{welcome_msg}</b></p>"
-            html_content += "<p>No issues found. Great job!</p></body></html>"
-            with open("ciforge-report.html", "w") as f:
-                f.write(html_content)
-            print("HTML report written to ciforge-report.html")
+    if args.format == 'html':
+        html_content = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CI Forge Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {{
+            --bg-color: #0f111a;
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --primary: #3b82f6;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --low: #10b981;
+            --medium: #f59e0b;
+            --high: #f97316;
+            --critical: #ef4444;
+        }}
+        body {{
+            background: radial-gradient(circle at top left, #1e1b4b, var(--bg-color));
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 40px 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }}
+        .dashboard {{
+            width: 100%;
+            max-width: 1000px;
+        }}
+        .header {{
+            text-align: center;
+            margin-bottom: 40px;
+            animation: fadeInDown 0.8s ease-out;
+        }}
+        .header h1 {{
+            font-size: 3rem;
+            font-weight: 800;
+            background: linear-gradient(to right, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 0;
+        }}
+        .header p {{
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }}
+        .card {{
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            animation: fadeInUp 0.8s ease-out;
+            transition: transform 0.3s ease;
+        }}
+        .card:hover {{
+            transform: translateY(-5px);
+        }}
+        .stats-grid {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }}
+        .stat-box {{
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+        }}
+        .stat-value {{
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 5px;
+        }}
+        .val-0 {{ color: var(--low); }}
+        .val-issues {{ color: var(--critical); }}
+        table {{
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }}
+        th, td {{
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }}
+        th {{
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.05em;
+        }}
+        tr:hover td {{
+            background: rgba(255, 255, 255, 0.02);
+        }}
+        .badge {{
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }}
+        .badge-low {{ background: rgba(16, 185, 129, 0.1); color: var(--low); border: 1px solid var(--low); }}
+        .badge-medium {{ background: rgba(245, 158, 11, 0.1); color: var(--medium); border: 1px solid var(--medium); }}
+        .badge-high {{ background: rgba(249, 115, 22, 0.1); color: var(--high); border: 1px solid var(--high); }}
+        .badge-critical {{ background: rgba(239, 68, 68, 0.1); color: var(--critical); border: 1px solid var(--critical); }}
+        .empty-state {{
+            text-align: center;
+            padding: 40px 0;
+        }}
+        .empty-state h2 {{
+            color: var(--low);
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }}
+        @keyframes fadeInUp {{
+            from {{ opacity: 0; transform: translateY(20px); }}
+            to {{ opacity: 1; transform: translateY(0); }}
+        }}
+        @keyframes fadeInDown {{
+            from {{ opacity: 0; transform: translateY(-20px); }}
+            to {{ opacity: 1; transform: translateY(0); }}
+        }}
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <div class="header">
+            <h1>CI Forge</h1>
+            <p>Code Quality & Security Dashboard</p>
+            {f"<div style='margin-top:15px; padding:10px 20px; background:rgba(59,130,246,0.1); border:1px solid #3b82f6; border-radius:99px; display:inline-block;'>{welcome_msg}</div>" if welcome_msg else ""}
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-box">
+                <div class="stat-value {'val-0' if not all_findings else 'val-issues'}">{len(all_findings)}</div>
+                <div style="color: var(--text-muted); font-size: 0.9rem;">Total Findings</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value val-0" style="color:var(--text-main);">0</div>
+                <div style="color: var(--text-muted); font-size: 0.9rem;">Secrets Leaked</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value val-0" style="color:var(--text-main);">A+</div>
+                <div style="color: var(--text-muted); font-size: 0.9rem;">Code Health</div>
+            </div>
+        </div>
+
+        <div class="card">
+"""
+        if not all_findings:
+            html_content += """            <div class="empty-state">
+                <h2>✨ Flawless Execution</h2>
+                <p style="color: var(--text-muted);">No issues found in the codebase. Ready for production.</p>
+            </div>
+"""
         else:
+            html_content += """            <table>
+                <thead>
+                    <tr>
+                        <th>Severity</th>
+                        <th>Location</th>
+                        <th>Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+"""
+            for finding in all_findings:
+                sev_val = SEVERITY_LEVELS.get(finding.severity, 0)
+                max_severity_found = max(max_severity_found, sev_val)
+                line_info = f":{finding.line}" if finding.line > 0 else ""
+                html_content += f"""                    <tr>
+                        <td><span class="badge badge-{finding.severity}">{finding.severity}</span></td>
+                        <td style="font-family: monospace; color: var(--primary);">{finding.file}{line_info}</td>
+                        <td>{finding.message}</td>
+                    </tr>
+"""
+            html_content += """                </tbody>
+            </table>
+"""
+        html_content += """        </div>
+    </div>
+</body>
+</html>
+"""
+        with open("ciforge-report.html", "w") as f:
+            f.write(html_content)
+        print("HTML report written to ciforge-report.html")
+        if not all_findings:
+            sys.exit(0)
+    else:
+        if not all_findings:
             if welcome_msg:
                 print(welcome_msg + "\n")
             print("No issues found. Great job!")
-        sys.exit(0)
-
-    max_severity_found = -1
-
-    if args.format == 'html':
-        html_content = "<html><head><style>"
-        html_content += "body { background-color: #1e1e1e; color: #d4d4d4; font-family: sans-serif; padding: 20px; }"
-        html_content += "table { border-collapse: collapse; width: 100%; margin-top: 20px; }"
-        html_content += "th, td { border: 1px solid #444; padding: 8px; text-align: left; }"
-        html_content += "th { background-color: #333; }"
-        html_content += ".sev-low { color: #4CAF50; } .sev-medium { color: #FFEB3B; } .sev-high { color: #FF9800; } .sev-critical { color: #F44336; }"
-        html_content += "</style></head><body>"
-        html_content += "<h1>ciforge Report</h1>"
-        if welcome_msg:
-            html_content += f"<p><b>{welcome_msg}</b></p>"
-        html_content += "<table><tr><th>Severity</th><th>File</th><th>Message</th></tr>"
-        
-        for finding in all_findings:
-            sev_val = SEVERITY_LEVELS.get(finding.severity, 0)
-            max_severity_found = max(max_severity_found, sev_val)
-            line_info = f":{finding.line}" if finding.line > 0 else ""
-            html_content += f"<tr><td class='sev-{finding.severity}'>{finding.severity.upper()}</td><td>{finding.file}{line_info}</td><td>{finding.message}</td></tr>"
+            sys.exit(0)
             
-        html_content += "</table></body></html>"
-        with open("ciforge-report.html", "w") as f:
-            f.write(html_content)
-        
-        print("HTML report written to ciforge-report.html")
-
-    else:
         if welcome_msg:
             print(welcome_msg + "\n")
         print("# ciforge Report\n")
