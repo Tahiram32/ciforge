@@ -28,6 +28,12 @@
 - **Architecture Diagram Generator**: Auto-generate Mermaid dependency diagrams.
 - **Auto PR Descriptions**: Generate rich markdown PR descriptions from git diffs.
 - **Mobile Config Linter**: Catch errors in `pubspec.yaml`, `build.gradle`, and `Podfile`.
+- **Blast Radius Radar**: AST-based analysis of Python imports to identify highly-coupled "God files".
+- **MCP Hygiene Scanner**: Validates `mcp.config.jsonc` files for secure Model Context Protocol server configuration.
+- **Schema Guardian**: Automatically detects breaking schema changes (`DROP TABLE`, `DROP COLUMN`) in SQL files.
+- **LLM Prompt Radar**: Native detection for prompt injections in LLM calls (unsafe f-string concatenation).
+- **Semantic Version Bumper**: Automatically parses `git log` and bumps semantic versions based on conventional commits.
+- **Discord Webhooks**: Post beautiful CI summary payloads directly to your team's Discord channel.
 
 ## Installation
 
@@ -77,6 +83,36 @@ ciforge --repo . --arch-diagram
 ciforge --repo . --pr-describe
 ```
 
+**Find highly-coupled files (Blast Radius):**
+```bash
+ciforge --repo . --blast-radius
+```
+
+**Scan MCP server configuration:**
+```bash
+ciforge --repo . --mcp-scan
+```
+
+**Detect breaking DB schema changes:**
+```bash
+ciforge --repo . --schema-scan
+```
+
+**Scan for LLM prompt injections:**
+```bash
+ciforge --repo . --prompt-scan
+```
+
+**Auto-bump semantic version based on commits:**
+```bash
+ciforge --repo . --bump-version
+```
+
+**Send CI summary to Discord webhook:**
+```bash
+ciforge --repo . --discord-webhook https://discord.com/api/webhooks/...
+```
+
 **Install local pre-commit hook (blocks bad commits):**
 ```bash
 ciforge --install-hook
@@ -90,7 +126,7 @@ Use `ciforge` directly in your workflows to comment on PRs and enforce standards
 steps:
   - uses: actions/checkout@v4
   - name: Run CI Forge
-    uses: Tahiram32/ciforge@v2.0.0
+    uses: Tahiram32/ciforge@v3.0.0
     with:
       repo: '.'
       base-ref: 'origin/main'

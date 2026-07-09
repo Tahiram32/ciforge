@@ -443,3 +443,103 @@ class TestCiforge(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+    # ------------------------------------------------------------------
+    # V4 tests
+    # ------------------------------------------------------------------
+
+    def test_blast_radius(self):
+        import os, tempfile
+        from src.ciforge import blast_radius
+        with tempfile.TemporaryDirectory() as tmpdir:
+            orig_cwd = os.getcwd()
+            try:
+                os.chdir(tmpdir)
+                for i in range(15):
+                    with open(f"mod{i}.py", "w") as f:
+                        f.write("x=1\n")
+                with open("main.py", "w") as f:
+                    for i in range(15):
+                        f.write(f"import mod{i}\n")
+                findings = blast_radius.analyze()
+                self.assertTrue(len(findings) == 1)
+                self.assertIn("Blast Radius Risk", findings[0].message)
+                self.assertEqual(findings[0].severity, "medium")
+            finally:
+                os.chdir(orig_cwd)
+
+    def test_mcp_scan(self):
+        import os, tempfile
+        from src.ciforge import mcp_scan
+        with tempfile.TemporaryDirectory() as tmpdir:
+            orig_cwd = os.getcwd()
+            try:
+                os.chdir(tmpdir)
+                with open("mcp.json", "w") as f:
+                    f.write('{"name": "test"}')
+                findings = mcp_scan.analyze()
+                self.assertTrue(len(findings) == 1)
+                self.assertIn("Missing mcpServers key", findings[0].message)
+                self.assertEqual(findings[0].severity, "high")
+            finally:
+                os.chdir(orig_cwd)
+
+    def test_schema_guardian(self):
+        import os, tempfile
+        from src.ciforge import schema_guardian
+        with tempfile.TemporaryDirectory() as tmpdir:
+            orig_cwd = os.getcwd()
+            try:
+                os.chdir(tmpdir)
+                with open("schema.sql", "w") as f:
+                    f.write("CREATE TABLE xyz;\nDROP TABLE xyz;\n")
+                findings = schema_guardian.analyze()
+                self.assertTrue(len(findings) == 1)
+                self.assertIn("Breaking Schema Change detected", findings[0].message)
+                self.assertEqual(findings[0].severity, "high")
+            finally:
+                os.chdir(orig_cwd)
+
+    def test_prompt_scan(self):
+        import os, tempfile
+        from src.ciforge import prompt_scan
+        with tempfile.TemporaryDirectory() as tmpdir:
+            orig_cwd = os.getcwd()
+            try:
+                os.chdir(tmpdir)
+                with open("llm_call.py", "w") as f:
+                    f.write("llm.invoke(f'hello {user_input}')\n")
+                findings = prompt_scan.analyze()
+                self.assertTrue(len(findings) == 1)
+                self.assertIn("Potential Prompt Injection", findings[0].message)
+                self.assertEqual(findings[0].severity, "high")
+            finally:
+                os.chdir(orig_cwd)
+
+    @patch("urllib.request.urlopen")
+    def test_discord_notify(self, mock_urlopen):
+        from src.ciforge import discord_notify
+        discord_notify.send_notification("http://discord.com/webhook", 5)
+        self.assertTrue(mock_urlopen.called)
+
+    @patch("subprocess.run")
+    def test_semantic_bump_major(self, mock_run):
+        from src.ciforge import semantic_bump
+        import os, tempfile
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mock_run.return_value.stdout = "abc1234 feat!: big change\n"
+            with open(os.path.join(tmpdir, "pyproject.toml"), "w") as f:
+                f.write('version = "1.2.3"\n')
+            new_v = semantic_bump.bump_version(tmpdir)
+            self.assertEqual(new_v, "2.0.0")
+
+    @patch("subprocess.run")
+    def test_semantic_bump_minor(self, mock_run):
+        from src.ciforge import semantic_bump
+        import os, tempfile
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mock_run.return_value.stdout = "abc1234 feat: minor feature\n"
+            with open(os.path.join(tmpdir, "pyproject.toml"), "w") as f:
+                f.write('version = "1.2.3"\n')
+            new_v = semantic_bump.bump_version(tmpdir)
+            self.assertEqual(new_v, "1.3.0")

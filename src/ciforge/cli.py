@@ -3,7 +3,7 @@ import sys
 import os
 import stat
 from . import scanner, code_quality, secrets, config_validator, coverage, ai_reviewer, assets, l10n, metrics, badges, community, multi_ai, dead_code, changelog, config_drift, mobile_lint, deploy_check, arch_diagram, pr_describe
-
+from . import blast_radius, mcp_scan, schema_guardian, prompt_scan, discord_notify, semantic_bump
 SEVERITY_LEVELS = {'low': 0, 'medium': 1, 'high': 2, 'critical': 3}
 
 def install_git_hook():
@@ -36,6 +36,12 @@ def main():
     parser.add_argument('--deploy-check', type=str, default=None, metavar='URL', help='Run deployment health check against the given URL')
     parser.add_argument('--arch-diagram', action='store_true', help='Generate Mermaid architecture diagram and write to ARCHITECTURE.md')
     parser.add_argument('--pr-describe', action='store_true', help='Generate a GitHub PR description from the current diff')
+    parser.add_argument('--blast-radius', action='store_true', help='Analyze Python imports to find highly coupled files')
+    parser.add_argument('--mcp-scan', action='store_true', help='Search for mcp.config.jsonc or mcp.json and validate')
+    parser.add_argument('--schema-scan', action='store_true', help='Scan all .sql files for breaking schema changes')
+    parser.add_argument('--prompt-scan', action='store_true', help='Scan .py files for LLM prompt injections')
+    parser.add_argument('--discord-webhook', type=str, default=None, metavar='URL', help='Discord webhook URL for notifications')
+    parser.add_argument('--bump-version', action='store_true', help='Semantic version bump based on git log')
     args = parser.parse_args()
 
     if args.install_hook:
@@ -75,6 +81,15 @@ def main():
     all_findings.extend(metrics.analyze())
     all_findings.extend(dead_code.analyze())
     all_findings.extend(mobile_lint.analyze())
+
+    if args.blast_radius:
+        all_findings.extend(blast_radius.analyze())
+    if args.mcp_scan:
+        all_findings.extend(mcp_scan.analyze())
+    if args.schema_scan:
+        all_findings.extend(schema_guardian.analyze())
+    if args.prompt_scan:
+        all_findings.extend(prompt_scan.analyze())
 
     if args.drift:
         all_findings.extend(config_drift.analyze_auto())
@@ -322,7 +337,17 @@ def main():
         fail_threshold = SEVERITY_LEVELS.get(args.fail_on, 3)
         if max_severity_found >= fail_threshold:
             print(f"\nFailed: Found issues with severity '{args.fail_on}' or higher.")
+            if args.discord_webhook:
+                discord_notify.send_notification(args.discord_webhook, len(all_findings))
             sys.exit(1)
+
+    if args.bump_version:
+        new_version = semantic_bump.bump_version(args.repo)
+        if new_version:
+            print(f"Version bumped to {new_version}")
+
+    if args.discord_webhook:
+        discord_notify.send_notification(args.discord_webhook, len(all_findings))
 
     sys.exit(0)
 
