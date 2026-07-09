@@ -60,6 +60,26 @@ class TestCiforge(unittest.TestCase):
         self.assertTrue("tabs" in findings[0].message)
         self.assertEqual(findings[0].severity, "medium")
 
+    def test_config_validator_toml_xml(self):
+        import os
+        with open("test_bad.xml", "w") as f:
+            f.write("<unclosed>")
+        findings_xml = config_validator.analyze("test_bad.xml", "")
+        self.assertEqual(len(findings_xml), 1)
+        self.assertIn("Invalid XML", findings_xml[0].message)
+        os.remove("test_bad.xml")
+        
+        try:
+            import tomllib
+            with open("test_bad.toml", "wb") as f:
+                f.write(b"[unclosed")
+            findings_toml = config_validator.analyze("test_bad.toml", "")
+            self.assertEqual(len(findings_toml), 1)
+            self.assertIn("Invalid TOML", findings_toml[0].message)
+            os.remove("test_bad.toml")
+        except ImportError:
+            pass
+
     @patch("os.path.exists", return_value=True)
     def test_coverage(self, mock_exists):
         with patch("builtins.open", mock_open(read_data='{"coverage": 75.0}')):

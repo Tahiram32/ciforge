@@ -30,4 +30,27 @@ def analyze(file_path: str, diff_text: str = None) -> List[Finding]:
             if re.search(r'^\s*\t', line_content) or '\t' in line_content:
                 findings.append(Finding(file_path, line_num, "YAML file indented with tabs", "medium"))
                 
+    if file_path.endswith('.toml'):
+        try:
+            import tomllib
+        except ImportError:
+            tomllib = None
+        if tomllib:
+            try:
+                with open(file_path, 'rb') as f:
+                    tomllib.load(f)
+            except tomllib.TOMLDecodeError as e:
+                findings.append(Finding(file_path, 0, f"Invalid TOML: {str(e)}", "high"))
+            except FileNotFoundError:
+                pass
+
+    if file_path.endswith('.xml'):
+        import xml.etree.ElementTree as ET
+        try:
+            ET.parse(file_path)
+        except ET.ParseError as e:
+            findings.append(Finding(file_path, 0, f"Invalid XML: {str(e)}", "high"))
+        except FileNotFoundError:
+            pass
+
     return findings
