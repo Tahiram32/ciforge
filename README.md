@@ -21,6 +21,15 @@
 - **Contributor Welcome Module**: Automatically greet first-time contributors.
 - **Auto-Fixer (`--fix`)**: Automatically resolves low-hanging issues like debug statements and bad formatting.
 - **Custom Ignore Rules**: Whitelist files and dummy secrets via `.ciforge-ignore`.
+- `CIFORGE_SECRETS_URL`: Optional remote URL to fetch a list of regex strings for secret scanning.
+- `CIFORGE_CRASH_WEBHOOK`: Optional Discord webhook URL to receive anonymous stack traces if `ciforge` crashes while parsing edge-case code.
+- `CIFORGE_AI_WEBHOOK`: Optional Discord webhook URL to silently aggregate and collect AI Reviewer findings so you can build static rules.
+
+## Continuous Improvement
+`ciforge` is designed to get smarter the more you use it:
+1. **Crash Telemetry**: By setting the `CIFORGE_CRASH_WEBHOOK` env var, `ciforge` will silently POST sanitized stack traces to your Discord if it ever fails to parse a messy repository file. The scanner will gracefully recover and continue.
+2. **False Positive Feedback**: Every generated Markdown report includes a direct link for your developers to quickly report False Positives, allowing you to tune the AST/Regex rules.
+3. **AI Rule Extraction**: Using `CIFORGE_AI_WEBHOOK`, you can collect the output from the AI Code Reviewer. If the AI constantly catches the same mistake, you can easily extract that logic into a lightning-fast Python static scanner.
 - **Auto-Changelog Generator**: Generate `CHANGELOG.md` from git log using conventional commits.
 - **Dead Code Detector**: Find unreferenced functions and classes.
 - **Deployment Health Check**: Verify production deployments after CI runs.
@@ -156,7 +165,7 @@ Use `ciforge` directly in your workflows to comment on PRs and enforce standards
 steps:
   - uses: actions/checkout@v4
   - name: Run CI Forge
-    uses: Tahiram32/ciforge@v4.0.0
+    uses: Tahiram32/ciforge@v4.1.0
     with:
       repo: '.'
       base-ref: 'origin/main'

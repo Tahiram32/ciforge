@@ -621,3 +621,46 @@ if __name__ == '__main__':
             self.assertEqual(len(findings), 1)
             self.assertIn("Load Test Failed", findings[0].message)
 
+    @patch("os.environ.get")
+    @patch("urllib.request.urlopen")
+    def test_telemetry_report_crash(self, mock_urlopen, mock_env_get):
+        from src.ciforge import telemetry
+        import json
+        
+        def mock_env(key, default=None):
+            if key == "CIFORGE_CRASH_WEBHOOK":
+                return "http://crash.webhook"
+            return default
+        mock_env_get.side_effect = mock_env
+        
+        try:
+            1 / 0
+        except Exception as e:
+            telemetry.report_crash(e, "test_module")
+            
+        self.assertTrue(mock_urlopen.called)
+        request = mock_urlopen.call_args[0][0]
+        data = json.loads(request.data.decode("utf-8"))
+        self.assertEqual(data["module_name"], "test_module")
+        self.assertEqual(data["exception_type"], "ZeroDivisionError")
+
+    @patch("os.environ.get")
+    @patch("urllib.request.urlopen")
+    def test_telemetry_report_ai_finding(self, mock_urlopen, mock_env_get):
+        from src.ciforge import telemetry
+        import json
+        
+        def mock_env(key, default=None):
+            if key == "CIFORGE_AI_WEBHOOK":
+                return "http://ai.webhook"
+            return default
+        mock_env_get.side_effect = mock_env
+        
+        telemetry.report_ai_finding("Test finding")
+        
+        self.assertTrue(mock_urlopen.called)
+        request = mock_urlopen.call_args[0][0]
+        data = json.loads(request.data.decode("utf-8"))
+        self.assertEqual(data["finding_message"], "Test finding")
+
+

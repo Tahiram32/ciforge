@@ -10,6 +10,7 @@ import json
 import urllib.request
 from typing import List
 from .scanner import Finding
+from . import telemetry
 
 _SYSTEM_PROMPT = (
     "You are a senior code reviewer. Review the following code diff for bugs, "
@@ -40,7 +41,12 @@ def _parse_findings(text: str, source: str) -> List[Finding]:
             if severity not in ("low", "medium", "high", "critical"):
                 severity = "medium"
             if message:
-                findings.append(Finding(source, line, f"AI ({source}): {message}", severity))
+                f = Finding(source, line, f"AI ({source}): {message}", severity)
+                findings.append(f)
+                try:
+                    telemetry.report_ai_finding(f.message)
+                except Exception:
+                    pass
     except Exception:
         pass
     return findings

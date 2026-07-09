@@ -4,7 +4,7 @@ import os
 import stat
 from . import scanner, code_quality, secrets, config_validator, coverage, ai_reviewer, assets, l10n, metrics, badges, community, multi_ai, dead_code, changelog, config_drift, mobile_lint, deploy_check, arch_diagram, pr_describe
 from . import blast_radius, mcp_scan, schema_guardian, prompt_scan, discord_notify, semantic_bump
-from . import vuln_scan, iac_scan, duplication, cloud_cost, load_test
+from . import vuln_scan, iac_scan, duplication, cloud_cost, load_test, telemetry
 SEVERITY_LEVELS = {'low': 0, 'medium': 1, 'high': 2, 'critical': 3}
 
 def install_git_hook():
@@ -73,52 +73,64 @@ def main():
     files = [f for f in scanner.git_changed_files() if not ignore_rules.is_ignored_file(f)]
     all_findings = []
 
+    def _run_scan(name, func, *args):
+        try:
+            return func(*args)
+        except Exception as e:
+            telemetry.report_crash(e, name)
+            print(f"Warning: scanner {name} failed.")
+            return []
+
     for f in files:
         diff_text = scanner.git_diff(f)
-        all_findings.extend(code_quality.analyze(f, diff_text))
-        all_findings.extend(secrets.analyze(f, diff_text))
-        all_findings.extend(config_validator.analyze(f, diff_text))
-        all_findings.extend(multi_ai.analyze(diff_text))
+        all_findings.extend(_run_scan("code_quality", code_quality.analyze, f, diff_text))
+        all_findings.extend(_run_scan("secrets", secrets.analyze, f, diff_text))
+        all_findings.extend(_run_scan("config_validator", config_validator.analyze, f, diff_text))
+        all_findings.extend(_run_scan("multi_ai", multi_ai.analyze, diff_text))
 
-    all_findings.extend(coverage.analyze())
-    all_findings.extend(ai_reviewer.analyze())
-    all_findings.extend(assets.analyze())
-    all_findings.extend(l10n.analyze())
-    all_findings.extend(metrics.analyze())
-    all_findings.extend(dead_code.analyze())
-    all_findings.extend(mobile_lint.analyze())
+    all_findings.extend(_run_scan("coverage", coverage.analyze))
+    all_findings.extend(_run_scan("ai_reviewer", ai_reviewer.analyze))
+    all_findings.extend(_run_scan("assets", assets.analyze))
+    all_findings.extend(_run_scan("l10n", l10n.analyze))
+    all_findings.extend(_run_scan("metrics", metrics.analyze))
+    all_findings.extend(_run_scan("dead_code", dead_code.analyze))
+    all_findings.extend(_run_scan("mobile_lint", mobile_lint.analyze))
 
     if args.blast_radius:
-        all_findings.extend(blast_radius.analyze())
+        all_findings.extend(_run_scan("blast_radius", blast_radius.analyze))
     if args.mcp_scan:
-        all_findings.extend(mcp_scan.analyze())
+        all_findings.extend(_run_scan("mcp_scan", mcp_scan.analyze))
     if args.schema_scan:
-        all_findings.extend(schema_guardian.analyze())
+        all_findings.extend(_run_scan("schema_guardian", schema_guardian.analyze))
     if args.prompt_scan:
-        all_findings.extend(prompt_scan.analyze())
+        all_findings.extend(_run_scan("prompt_scan", prompt_scan.analyze))
 
     if args.drift:
-        all_findings.extend(config_drift.analyze_auto())
+        all_findings.extend(_run_scan("config_drift", config_drift.analyze_auto))
 
     if args.deploy_check:
-        all_findings.extend(deploy_check.check(args.deploy_check))
+        all_findings.extend(_run_scan("deploy_check", deploy_check.check, args.deploy_check))
 
     if args.pr_describe:
         combined_diff = "\n".join(scanner.git_diff(f) for f in files)
-        description = pr_describe.generate(combined_diff)
-        print(description)
+        try:
+            description = pr_describe.generate(combined_diff)
+            print(description)
+        except Exception as e:
+            telemetry.report_crash(e, "pr_describe")
+            print("Warning: scanner pr_describe failed.")
         sys.exit(0)
 
     if args.vuln_scan:
-        all_findings.extend(vuln_scan.analyze())
+        all_findings.extend(_run_scan("vuln_scan", vuln_scan.analyze))
     if args.iac_scan:
-        all_findings.extend(iac_scan.analyze())
+        all_findings.extend(_run_scan("iac_scan", iac_scan.analyze))
     if args.dupe_scan:
-        all_findings.extend(duplication.analyze())
+        all_findings.extend(_run_scan("duplication", duplication.analyze))
     if args.cloud_cost:
-        all_findings.extend(cloud_cost.analyze())
+        all_findings.extend(_run_scan("cloud_cost", cloud_cost.analyze))
     if args.load_test:
-        all_findings.extend(load_test.analyze(args.load_test))
+        all_findings.extend(_run_scan("load_test", load_test.analyze, args.load_test))
 
     if args.badge:
         badges.generate_badge(all_findings)
@@ -328,7 +340,7 @@ def main():
     </div>
 </body>
 </html>
-"""
+\n\n🔍 **Found a False Positive?** [Report it here to improve ciforge!](https://github.com/Tahiram32/ciforge/issues/new?title=False+Positive+Report&labels=false-positive)"""
         with open("ciforge-report.html", "w") as f:
             f.write(html_content)
         print("HTML report written to ciforge-report.html")
@@ -349,6 +361,8 @@ def main():
             max_severity_found = max(max_severity_found, sev_val)
             line_info = f":{finding.line}" if finding.line > 0 else ""
             print(f"- **[{finding.severity.upper()}]** `{finding.file}{line_info}`: {finding.message}")
+            
+        print("\\n\\n🔍 **Found a False Positive?** [Report it here to improve ciforge!](https://github.com/Tahiram32/ciforge/issues/new?title=False+Positive+Report&labels=false-positive)")
 
     if args.fail_on != 'none':
         fail_threshold = SEVERITY_LEVELS.get(args.fail_on, 3)
