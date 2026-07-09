@@ -151,6 +151,27 @@ class TestCiforge(unittest.TestCase):
         self.assertFalse(rules.is_ignored_secret("my_secret = 'OTHERSECRET'"))
         os.remove('.ciforge-ignore')
         rules.patterns = []
+    def test_fixer(self):
+        import os
+        from src.ciforge.fixer import fix_all
+        from src.ciforge.scanner import Finding
+        with open("test_fix.py", "w") as f:
+            f.write("def foo():\n    print('debug')\n")
+        with open("test_fix.yml", "w") as f:
+            f.write("key:\n\tvalue\n")
+        findings = [
+            Finding("test_fix.py", 2, "Found debug statement", "medium"),
+            Finding("test_fix.yml", 2, "YAML file indented with tabs", "medium")
+        ]
+        fixed = fix_all(findings)
+        self.assertEqual(fixed, 2)
+        with open("test_fix.py", "r") as f:
+            self.assertEqual(f.read(), "def foo():\n    # print('debug')\n")
+        with open("test_fix.yml", "r") as f:
+            self.assertEqual(f.read(), "key:\n  value\n")
+        os.remove("test_fix.py")
+        os.remove("test_fix.yml")
+
     def test_badges(self):
         from src.ciforge import badges
         from src.ciforge.scanner import Finding

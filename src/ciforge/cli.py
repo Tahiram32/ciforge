@@ -29,6 +29,7 @@ def main():
     parser.add_argument('--format', type=str, default='markdown', choices=['markdown', 'html'], help='Output format')
     parser.add_argument('--badge', action='store_true', help='Generate badge')
     parser.add_argument('--install-hook', action='store_true', help='Install git pre-commit hook')
+    parser.add_argument('--fix', action='store_true', help='Auto-fix low-hanging issues')
     args = parser.parse_args()
 
     if args.install_hook:
@@ -55,6 +56,12 @@ def main():
 
     if args.badge:
         badges.generate_badge(all_findings)
+
+    if args.fix:
+        from .fixer import fix_all
+        fixed = fix_all(all_findings)
+        if fixed > 0:
+            print(f"Auto-fixer resolved {fixed} issue(s).")
 
     welcome_msg = community.get_welcome_message()
     max_severity_found = -1
