@@ -745,6 +745,102 @@ class TestCiforge(unittest.TestCase):
             files = scanner.get_all_files(tmpdir)
             self.assertEqual(len(files), 1)
             self.assertEqual(files[0], "test.py")
+    def test_v61_dead_code_dunder_and_fixtures(self):
+        import os, tempfile
+        from src.ciforge import dead_code
+        with tempfile.TemporaryDirectory() as tmpdir:
+            orig_cwd = os.getcwd()
+            try:
+                os.chdir(tmpdir)
+                # Dunder method, fixture, and normal orphaned func
+                with open("module_a.py", "w") as f:
+                    f.write('''
+import pytest
+
+def __dunder_method__():
+    pass
+
+@pytest.fixture
+def my_fixture():
+    pass
+
+@pytest.fixture()
+def my_fixture2():
+    pass
+
+def orphaned_func():
+    pass
+''')
+                # Test files should be ignored
+                os.mkdir("tests")
+                with open("tests/test_foo.py", "w") as f:
+                    f.write("def orphaned_test_func():\n    pass\n")
+                    
+                import importlib
+                importlib.reload(dead_code)
+                findings = dead_code.analyze()
+                messages = [f.message for f in findings]
+                
+                self.assertTrue(any("orphaned_func" in m for m in messages))
+                self.assertFalse(any("__dunder_method__" in m for m in messages))
+                self.assertFalse(any("my_fixture" in m for m in messages))
+                self.assertFalse(any("my_fixture2" in m for m in messages))
+                self.assertFalse(any("orphaned_test_func" in m for m in messages))
+            finally:
+                os.chdir(orig_cwd)
+
+    @patch("glob.glob")
+    @patch("builtins.open", new_callable=mock_open)
+    def test_v61_duplication_abstract(self, mock_file, mock_glob):
+        from src.ciforge import duplication
+        mock_glob.return_value = ["file1.py", "file2.py"]
+        
+        # Test for small functions and NotImplementedError skipping
+        def mock_read(filename, *args, **kwargs):
+            if filename == "file1.py":
+                return mock_open(read_data='''
+def small1():
+    pass
+def small2():
+    return True
+def notimpl1():
+    raise NotImplementedError
+def notimpl2():
+    raise NotImplementedError()
+def notimpl3():
+    """Docstring"""
+    pass
+def real_func():
+    a = 1
+    b = 2
+    return a + b
+''').return_value
+            elif filename == "file2.py":
+                return mock_open(read_data='''
+def small1_dup():
+    pass
+def small2_dup():
+    return True
+def notimpl1_dup():
+    raise NotImplementedError
+def notimpl2_dup():
+    raise NotImplementedError()
+def notimpl3_dup():
+    """Docstring 2"""
+    pass
+def real_func_dup():
+    a = 1
+    b = 2
+    return a + b
+''').return_value
+            return mock_open(read_data="").return_value
+            
+        mock_file.side_effect = mock_read
+        findings = duplication.analyze()
+        messages = [f.message for f in findings]
+        
+        self.assertEqual(len(messages), 1)
+        self.assertTrue("real_func" in messages[0])
 
 if __name__ == '__main__':
     unittest.main()

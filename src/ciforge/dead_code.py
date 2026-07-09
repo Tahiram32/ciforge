@@ -44,6 +44,20 @@ def _collect_definitions(filepath: str) -> List[str]:
         tree = ast.parse(source, filename=filepath)
         for node in ast.walk(tree):
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                if node.name.startswith("__") and node.name.endswith("__"):
+                    continue
+                    
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    is_fixture = False
+                    for dec in getattr(node, "decorator_list", []):
+                        if isinstance(dec, ast.Call):
+                            dec = dec.func
+                        if isinstance(dec, ast.Name) and dec.id == "fixture":
+                            is_fixture = True
+                        elif isinstance(dec, ast.Attribute) and isinstance(dec.value, ast.Name) and dec.value.id == "pytest" and dec.attr == "fixture":
+                            is_fixture = True
+                    if is_fixture:
+                        continue
                 names.append(node.name)
     except Exception:
         pass
@@ -62,6 +76,10 @@ def analyze() -> List[Finding]:
     all_files = list(_iter_py_files())
 
     for filepath in all_files:
+        clean_path = filepath.lstrip("./").lstrip(".\\\\")
+        if "/tests/" in filepath or "\\\\tests\\\\" in filepath or clean_path.startswith("test_") or clean_path.startswith("tests/"):
+            continue
+            
         defs = _collect_definitions(filepath)
         if defs:
             definitions[filepath] = defs

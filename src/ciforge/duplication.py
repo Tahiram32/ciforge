@@ -24,10 +24,24 @@ def analyze() -> list[Finding]:
             tree = ast.parse(content, filename=py_file)
             for node in ast.walk(tree):
                 if isinstance(node, ast.FunctionDef):
+                    if hasattr(node, "end_lineno") and hasattr(node, "lineno") and node.end_lineno is not None and node.lineno is not None:
+                        if node.end_lineno - node.lineno < 2:
+                            continue
+
                     body = get_ast_body(node)
                     if not body:
                         continue
                     if len(body) <= 1 and isinstance(body[0], (ast.Pass, ast.Return)):
+                        continue
+                        
+                    is_not_implemented = False
+                    if len(body) == 1 and isinstance(body[0], ast.Raise):
+                        exc = body[0].exc
+                        if isinstance(exc, ast.Call) and isinstance(exc.func, ast.Name) and exc.func.id == "NotImplementedError":
+                            is_not_implemented = True
+                        elif isinstance(exc, ast.Name) and exc.id == "NotImplementedError":
+                            is_not_implemented = True
+                    if is_not_implemented:
                         continue
                         
                     body_str = ast_to_string(body)
