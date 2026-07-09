@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ciforge-cli"
-version = "2.0.3"
+version = "2.0.4"
 description = "A zero-dependency CI tool replacing multiple CI services."
 readme = "README.md"
 requires-python = ">=3.8"
@@ -24,6 +24,7 @@ classifiers = [
     "Topic :: Software Development :: Build Tools",
     "Topic :: Security",
     "Operating System :: OS Independent",
+    "Environment :: Console",
 ]
 dependencies = []
 
