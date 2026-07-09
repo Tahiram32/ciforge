@@ -418,10 +418,6 @@ def _main():
         discord_notify.send_notification(args.discord_webhook, len(all_findings))
 
     sys.exit(0)
-
-if __name__ == '__main__':
-    main()
-
 def main():
     try:
         _main()
@@ -430,3 +426,6 @@ def main():
         telemetry.report_crash(e, "FATAL_CORE")
         print("\n[ciforge] FATAL WARNING: ciforge encountered a catastrophic error but degraded gracefully so as not to block your CI.")
         sys.exit(0)
+
+if __name__ == '__main__':
+    main()
