@@ -51,12 +51,18 @@ def main():
     parser.add_argument('--load-test', type=str, default=None, metavar='URL', help='Run a load test against the given URL')
     parser.add_argument('--serve-mcp', action='store_true', help='Run as an MCP stdio server')
     parser.add_argument('--auto-fix-pr', action='store_true', help='Create an agentic PR for automated fixes')
+    parser.add_argument('--incremental', action='store_true', help='Only scan files changed in git')
+    parser.add_argument('--auto-update', action='store_true', help='Automatically upgrade dependencies in package.json/requirements.txt')
     args = parser.parse_args()
 
     if args.serve_mcp:
         from . import mcp_server
         mcp_server.serve()
         sys.exit(0)
+        
+    if args.auto_update:
+        from . import auto_update
+        auto_update.update_dependencies(args.repo)
 
     explicit_scanners = [
         args.dead_code, args.vuln_scan, args.iac_scan, args.dupe_scan,
@@ -89,7 +95,11 @@ def main():
         os.environ['CIFORGE_AI_PROVIDER'] = args.provider
 
     from .ignore import rules as ignore_rules
-    files = [f for f in scanner.git_changed_files() if not ignore_rules.is_ignored_file(f)]
+    if args.incremental:
+        raw_files = scanner.git_changed_files()
+    else:
+        raw_files = scanner.get_all_files(args.repo)
+    files = [f for f in raw_files if not ignore_rules.is_ignored_file(f)]
     all_findings = []
 
     def _run_scan(name, func, *args):

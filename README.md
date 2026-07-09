@@ -21,6 +21,20 @@ steps:
 You can plug `ciforge` directly into Claude Desktop, Cursor, or any AI Agent to instantly grant it the ability to execute Enterprise DevOps tasks. 
 Just configure your agent to run: `ciforge --serve-mcp`.
 
+## 💰 Save Time & Money with v5.1.0
+
+1. **Incremental Scanning (`--incremental`)**:
+   - In `src/ciforge/scanner.py`, add a function `get_all_files(repo_path)`. It should recursively find all relevant files (e.g., .py, .js, .json, .tf, etc.) in the repo, ignoring `.git` and `node_modules`.
+   - In `src/ciforge/cli.py`, add `--incremental`. If `--incremental` is true, `files = scanner.git_changed_files()`. If false (default), `files = scanner.get_all_files(args.repo)`. Ensure it filters through `ignore_rules` in both cases.
+
+2. **Automated Dependency Upgrades (`--auto-update`)**:
+   - In `src/ciforge/cli.py`, add `--auto-update` argument.
+   - Update `src/ciforge/vuln_scan.py` to optionally perform the update, OR better, write a new module `src/ciforge/auto_update.py` that parses `requirements.txt` / `package.json`, checks the latest version on PyPI/NPM via `urllib.request`, and overwrites the file with the fixed version if `--auto-update` is true. Then call this from `cli.py` if the flag is present.
+
+3. **Update `README.md`**:
+   - Insert the user's exact 3 features into the README under a new section `## 💰 Save Time & Money with v5.1.0`.
+   - Copy the exact text the user provided for all 3 points into the README.
+
 ## Features
 
 - **Code Quality**: Intelligent linting and AST-based complexity analysis (cyclomatic complexity, long functions).

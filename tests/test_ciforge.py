@@ -441,8 +441,6 @@ class TestCiforge(unittest.TestCase):
                 os.chdir(orig_cwd)
 
 
-if __name__ == '__main__':
-    unittest.main()
 
     # ------------------------------------------------------------------
     # V4 tests
@@ -696,6 +694,43 @@ if __name__ == '__main__':
                 self.assertEqual(content, "print('fixed')")
             finally:
                 os.chdir(orig_cwd)
+
+    @patch("src.ciforge.auto_update.get_latest_pypi_version")
+    def test_auto_update_requirements(self, mock_pypi):
+        from src.ciforge import auto_update
+        import os, tempfile
+        
+        mock_pypi.return_value = "2.0.0"
+        with tempfile.TemporaryDirectory() as tmpdir:
+            orig_cwd = os.getcwd()
+            try:
+                os.chdir(tmpdir)
+                with open("requirements.txt", "w") as f:
+                    f.write("requests==1.0.0\n")
+                    
+                auto_update.update_dependencies(tmpdir)
+                
+                with open("requirements.txt", "r") as f:
+                    content = f.read()
+                self.assertEqual(content, "requests==2.0.0\n")
+            finally:
+                os.chdir(orig_cwd)
+
+    def test_incremental_scanner_get_all_files(self):
+        from src.ciforge import scanner
+        import os, tempfile
+        
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with open(os.path.join(tmpdir, "test.py"), "w") as f:
+                f.write("x = 1")
+            
+            os.mkdir(os.path.join(tmpdir, ".git"))
+            with open(os.path.join(tmpdir, ".git", "config"), "w") as f:
+                f.write("something")
+                
+            files = scanner.get_all_files(tmpdir)
+            self.assertEqual(len(files), 1)
+            self.assertEqual(files[0], "test.py")
 
 if __name__ == '__main__':
     unittest.main()

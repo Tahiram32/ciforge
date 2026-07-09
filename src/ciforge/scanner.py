@@ -1,6 +1,24 @@
 import subprocess
 from dataclasses import dataclass
 from typing import List, Tuple
+import os
+
+def get_all_files(repo_path: str) -> List[str]:
+    files = []
+    extensions = {'.py', '.js', '.ts', '.json', '.yaml', '.yml', '.tf', '.txt'}
+    for root, dirs, filenames in os.walk(repo_path):
+        if '.git' in dirs:
+            dirs.remove('.git')
+        if 'node_modules' in dirs:
+            dirs.remove('node_modules')
+        if '.venv' in dirs:
+            dirs.remove('.venv')
+        
+        for filename in filenames:
+            ext = os.path.splitext(filename)[1]
+            if ext in extensions or filename in ('Dockerfile', 'requirements.txt', 'package.json'):
+                files.append(os.path.relpath(os.path.join(root, filename), repo_path))
+    return files
 
 @dataclass
 class Finding:
