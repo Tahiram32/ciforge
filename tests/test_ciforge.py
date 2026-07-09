@@ -138,9 +138,19 @@ class TestCiforge(unittest.TestCase):
             findings = code_quality.analyze("file.py", "+def complex_func():")
             self.assertTrue(any("High cyclomatic complexity" in f.message for f in findings))
 
-if __name__ == '__main__':
-    unittest.main()
-
+    def test_ignore_rules(self):
+        import os
+        from src.ciforge.ignore import rules
+        with open('.ciforge-ignore', 'w') as f:
+            f.write("tests/*\nAKIAIOSFODNN7EXAMPLE\n")
+        rules.patterns = []
+        rules._load()
+        self.assertTrue(rules.is_ignored_file("tests/test_foo.py"))
+        self.assertFalse(rules.is_ignored_file("src/ciforge/cli.py"))
+        self.assertTrue(rules.is_ignored_secret("my_secret = 'AKIAIOSFODNN7EXAMPLE'"))
+        self.assertFalse(rules.is_ignored_secret("my_secret = 'OTHERSECRET'"))
+        os.remove('.ciforge-ignore')
+        rules.patterns = []
     def test_badges(self):
         from src.ciforge import badges
         from src.ciforge.scanner import Finding
@@ -181,3 +191,6 @@ if __name__ == '__main__':
             except SystemExit:
                 pass
             m_open.assert_called_with(".git/hooks/pre-commit", "w")
+
+if __name__ == '__main__':
+    unittest.main()

@@ -14,8 +14,11 @@ def analyze(file_path: str, diff_text: str = None) -> List[Finding]:
         
     findings = []
     added_lines = _extract_diff_sections(diff_text)
+    from .ignore import rules as ignore_rules
     
     for line_num, line_content in added_lines:
+        if ignore_rules.is_ignored_secret(line_content):
+            continue
         for secret_type, pattern in PATTERNS.items():
             if pattern.search(line_content):
                 findings.append(Finding(file_path, line_num, f"Leaked secret detected ({secret_type})", "critical"))

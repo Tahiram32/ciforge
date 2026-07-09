@@ -37,7 +37,8 @@ def main():
     if args.repo != '.':
         os.chdir(args.repo)
 
-    files = scanner.git_changed_files()
+    from .ignore import rules as ignore_rules
+    files = [f for f in scanner.git_changed_files() if not ignore_rules.is_ignored_file(f)]
     all_findings = []
 
     for f in files:
