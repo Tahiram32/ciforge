@@ -543,3 +543,81 @@ if __name__ == '__main__':
                 f.write('version = "1.2.3"\n')
             new_v = semantic_bump.bump_version(tmpdir)
             self.assertEqual(new_v, "1.3.0")
+
+    @patch("os.path.exists")
+    @patch("builtins.open", new_callable=mock_open)
+    def test_vuln_scan(self, mock_file, mock_exists):
+        from src.ciforge import vuln_scan
+        mock_exists.side_effect = lambda x: x in ['requirements.txt', 'package.json']
+        
+        def mock_read(filename, *args, **kwargs):
+            if filename == 'requirements.txt':
+                return mock_open(read_data="requests==2.30.0\ndjango==4.3\n").return_value
+            elif filename == 'package.json':
+                return mock_open(read_data='{"dependencies": {"lodash": "4.17.20"}}').return_value
+            return mock_open(read_data="").return_value
+        
+        mock_file.side_effect = mock_read
+        
+        findings = vuln_scan.analyze()
+        self.assertEqual(len(findings), 2)
+        self.assertTrue(any("requests" in f.message for f in findings))
+        self.assertTrue(any("lodash" in f.message for f in findings))
+
+    @patch("os.path.exists")
+    @patch("glob.glob")
+    @patch("builtins.open", new_callable=mock_open)
+    def test_iac_scan(self, mock_file, mock_glob, mock_exists):
+        from src.ciforge import iac_scan
+        mock_exists.return_value = True
+        mock_glob.return_value = ["main.tf"]
+        
+        def mock_read(filename, *args, **kwargs):
+            if filename == 'Dockerfile':
+                return mock_open(read_data="FROM ubuntu\nUSER root\nEXPOSE 0.0.0.0").return_value
+            elif filename == 'docker-compose.yml':
+                return mock_open(read_data="ports:\n  - '0.0.0.0:80:80'").return_value
+            elif filename == 'main.tf':
+                return mock_open(read_data='access_key = "AKIA123"\nbind = "0.0.0.0"').return_value
+            return mock_open(read_data="").return_value
+            
+        mock_file.side_effect = mock_read
+        findings = iac_scan.analyze()
+        self.assertEqual(len(findings), 5)
+
+    @patch("glob.glob")
+    @patch("builtins.open", new_callable=mock_open)
+    def test_duplication(self, mock_file, mock_glob):
+        from src.ciforge import duplication
+        mock_glob.return_value = ["file1.py", "file2.py"]
+        
+        def mock_read(filename, *args, **kwargs):
+            if filename == "file1.py":
+                return mock_open(read_data="def func1():\n  a = 1\n  return a\n").return_value
+            elif filename == "file2.py":
+                return mock_open(read_data="def func2():\n  a = 1\n  return a\n").return_value
+            return mock_open(read_data="").return_value
+            
+        mock_file.side_effect = mock_read
+        findings = duplication.analyze()
+        self.assertEqual(len(findings), 1)
+        self.assertIn("Code Duplication", findings[0].message)
+
+    @patch("glob.glob")
+    @patch("builtins.open", new_callable=mock_open)
+    def test_cloud_cost(self, mock_file, mock_glob):
+        from src.ciforge import cloud_cost
+        mock_glob.return_value = ["main.tf"]
+        mock_file.return_value = mock_open(read_data='resource "aws_instance" "app" {}\nresource "aws_db_instance" "db" {}').return_value
+        
+        findings = cloud_cost.analyze()
+        self.assertEqual(len(findings), 3)
+
+    @patch("urllib.request.urlopen")
+    def test_load_test(self, mock_urlopen):
+        from src.ciforge import load_test
+        with patch("src.ciforge.load_test.fetch", return_value=(2.0, None)):
+            findings = load_test.analyze("http://example.com")
+            self.assertEqual(len(findings), 1)
+            self.assertIn("Load Test Failed", findings[0].message)
+

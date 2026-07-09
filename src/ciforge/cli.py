@@ -4,6 +4,7 @@ import os
 import stat
 from . import scanner, code_quality, secrets, config_validator, coverage, ai_reviewer, assets, l10n, metrics, badges, community, multi_ai, dead_code, changelog, config_drift, mobile_lint, deploy_check, arch_diagram, pr_describe
 from . import blast_radius, mcp_scan, schema_guardian, prompt_scan, discord_notify, semantic_bump
+from . import vuln_scan, iac_scan, duplication, cloud_cost, load_test
 SEVERITY_LEVELS = {'low': 0, 'medium': 1, 'high': 2, 'critical': 3}
 
 def install_git_hook():
@@ -42,6 +43,11 @@ def main():
     parser.add_argument('--prompt-scan', action='store_true', help='Scan .py files for LLM prompt injections')
     parser.add_argument('--discord-webhook', type=str, default=None, metavar='URL', help='Discord webhook URL for notifications')
     parser.add_argument('--bump-version', action='store_true', help='Semantic version bump based on git log')
+    parser.add_argument('--vuln-scan', action='store_true', help='Scan for known vulnerabilities in requirements.txt and package.json')
+    parser.add_argument('--iac-scan', action='store_true', help='Scan Infrastructure as Code files for anti-patterns')
+    parser.add_argument('--dupe-scan', action='store_true', help='Scan for structural code duplication')
+    parser.add_argument('--cloud-cost', action='store_true', help='Estimate cloud cost from Terraform files')
+    parser.add_argument('--load-test', type=str, default=None, metavar='URL', help='Run a load test against the given URL')
     args = parser.parse_args()
 
     if args.install_hook:
@@ -102,6 +108,17 @@ def main():
         description = pr_describe.generate(combined_diff)
         print(description)
         sys.exit(0)
+
+    if args.vuln_scan:
+        all_findings.extend(vuln_scan.analyze())
+    if args.iac_scan:
+        all_findings.extend(iac_scan.analyze())
+    if args.dupe_scan:
+        all_findings.extend(duplication.analyze())
+    if args.cloud_cost:
+        all_findings.extend(cloud_cost.analyze())
+    if args.load_test:
+        all_findings.extend(load_test.analyze(args.load_test))
 
     if args.badge:
         badges.generate_badge(all_findings)

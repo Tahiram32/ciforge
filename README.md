@@ -34,6 +34,11 @@
 - **LLM Prompt Radar**: Native detection for prompt injections in LLM calls (unsafe f-string concatenation).
 - **Semantic Version Bumper**: Automatically parses `git log` and bumps semantic versions based on conventional commits.
 - **Discord Webhooks**: Post beautiful CI summary payloads directly to your team's Discord channel.
+- **Supply Chain Vulnerability Scanner**: Zero-dependency offline detection of known CVEs in your `requirements.txt` and `package.json`.
+- **Infrastructure as Code (IaC) Security**: Detects severe security anti-patterns in Dockerfiles, `docker-compose.yml`, and Terraform files.
+- **Code Duplication Detector**: AST-based analysis to find structural duplicate code across your codebase.
+- **Cloud Cost Estimator**: Parses your IaC changes to estimate monthly AWS/GCP bill increases before you deploy.
+- **Automated Load Tester**: Blasts your URLs with concurrent requests to measure latency regressions.
 
 ## Installation
 
@@ -113,6 +118,31 @@ ciforge --repo . --bump-version
 ciforge --repo . --discord-webhook https://discord.com/api/webhooks/...
 ```
 
+**Scan for Supply Chain Vulnerabilities (CVEs):**
+```bash
+ciforge --repo . --vuln-scan
+```
+
+**Scan Infrastructure as Code for Security Issues:**
+```bash
+ciforge --repo . --iac-scan
+```
+
+**Find structural code duplication:**
+```bash
+ciforge --repo . --dupe-scan
+```
+
+**Estimate AWS/GCP Cloud Costs from Terraform:**
+```bash
+ciforge --repo . --cloud-cost
+```
+
+**Run Automated Load Test:**
+```bash
+ciforge --repo . --load-test https://your-staging-url.com
+```
+
 **Install local pre-commit hook (blocks bad commits):**
 ```bash
 ciforge --install-hook
@@ -126,7 +156,7 @@ Use `ciforge` directly in your workflows to comment on PRs and enforce standards
 steps:
   - uses: actions/checkout@v4
   - name: Run CI Forge
-    uses: Tahiram32/ciforge@v3.0.0
+    uses: Tahiram32/ciforge@v4.0.0
     with:
       repo: '.'
       base-ref: 'origin/main'
