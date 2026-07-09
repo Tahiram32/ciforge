@@ -120,3 +120,44 @@ class TestCiforge(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+    def test_badges(self):
+        from src.ciforge import badges
+        from src.ciforge.scanner import Finding
+        import os
+        
+        findings = [Finding(file="f", line=1, message="m", severity="low")]
+        badges.generate_badge(findings)
+        self.assertTrue(os.path.exists("ciforge-badge.svg"))
+        with open("ciforge-badge.svg", "r") as f:
+            content = f.read()
+            self.assertIn("B", content)
+            self.assertIn("#97CA00", content)
+        os.remove("ciforge-badge.svg")
+
+    @patch("os.environ.get")
+    @patch("os.path.exists", return_value=True)
+    def test_community(self, mock_exists, mock_env_get):
+        from src.ciforge import community
+        import json
+        
+        mock_env_get.return_value = "dummy.json"
+        with patch("builtins.open", mock_open(read_data=json.dumps({"pull_request": {"author_association": "FIRST_TIMER"}}))):
+            msg = community.get_welcome_message()
+            self.assertIn("Welcome", msg)
+
+    @patch("os.path.isdir", return_value=True)
+    @patch("os.path.exists", return_value=True)
+    @patch("os.chmod")
+    @patch("os.stat")
+    def test_install_git_hook(self, mock_stat, mock_chmod, mock_exists, mock_isdir):
+        from src.ciforge.cli import install_git_hook
+        import sys
+        
+        mock_stat.return_value.st_mode = 0o644
+        with patch("builtins.open", mock_open()) as m_open:
+            try:
+                install_git_hook()
+            except SystemExit:
+                pass
+            m_open.assert_called_with(".git/hooks/pre-commit", "w")

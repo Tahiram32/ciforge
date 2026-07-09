@@ -10,8 +10,11 @@
 - **Config Validation**: Ensure your CI/CD and infrastructure configuration files are sound.
 - **PR Metrics & Velocity Tracking**: Analyze pull request size, churn, and time span metrics.
 - **AI Reviewer**: Integrates with OpenAI to automatically find logic flaws and missing edge cases.
-- **Image Optimization**: Detects large unoptimized assets (.png, .jpg, .jpeg) over 500KB.
 - **Localization Sync**: Finds missing translation keys by comparing localization files against a base en.json.
+- **Git Hooks Installer**: Easily install pre-commit hooks to run ciforge before committing.
+- **Auto-Generated Badges**: Generate dynamic SVG badges reflecting repository health.
+- **HTML Reports**: Export beautiful standalone HTML reports.
+- **Contributor Welcome Module**: Automatically greet first-time contributors.
 
 ## Installation
 
